@@ -45,7 +45,6 @@ class User(object):
             print("Finding page: \t" + str(page_no) + " of bookmarks. \t" + str(num_works) + " bookmarks ids found.")
 
             req = self.sess.get(api_url % page_no)
-            soup = BeautifulSoup(req.text, features='html.parser')
 
             # if timeout, wait and try again
             while len(req.text) < 20 and "Retry later" in req.text:
@@ -53,44 +52,12 @@ class User(object):
                 time.sleep(180)
                 req = self.sess.get(api_url % page_no)
 
-            # The entries are stored in a list of the form:
-            #
-            #     <ol class="bookmark index group">
-            #       <li id="bookmark_12345" class="bookmark blurb group" role="article">
-            #         ...
-            #       </li>
-            #       <li id="bookmark_67890" class="bookmark blurb group" role="article">
-            #         ...
-            #       </li>
-            #       ...
-            #     </o
+            soup = BeautifulSoup(req.text, features='html.parser')
 
-            ol_tag = soup.find('ol', attrs={'class': 'bookmark'})
-
-            for li_tag in ol_tag.findAll('li', attrs={'class': 'blurb'}):
-                try:
-                    # <h4 class="heading">
-                    #     <a href="/works/12345678">Work Title</a>
-                    #     <a href="/users/authorname/pseuds/authorpseud" rel="author">Author Name</a>
-                    # </h4>
-
-                    for h4_tag in li_tag.findAll('h4', attrs={'class': 'heading'}):
-                        for link in h4_tag.findAll('a'):
-                            if ('works' in link.get('href')) and not ('external_works' in link.get('href')):
-                                num_works = num_works + 1
-                                work_id = link.get('href').replace('/works/', '')
-                                bookmarks.append(work_id)
-                except KeyError:
-                    # A deleted work shows up as
-                    #
-                    #      <li class="deleted reading work blurb group">
-                    #
-                    # There's nothing that we can do about that, so just skip
-                    # over it.
-                    if 'deleted' in li_tag.attrs['class']:
-                        pass
-                    else:
-                        raise
+            for id_type, id in self._get_work_or_series_ids_from_page(soup):
+                if id_type == 'work':
+                    num_works += 1
+                    bookmarks.append(id)
 
                 if max_count and num_works == max_count:
                     max_bookmarks_found = True
@@ -294,3 +261,42 @@ class User(object):
             next_button = soup.find('li', attrs={'class': 'next'})
             if next_button.find('span', attrs={'class': 'disabled'}):
                 break
+
+    def _get_work_or_series_ids_from_page(self, soup):
+        # The entries are stored in a list of the form:
+        #
+        #     <ol class="bookmark index group">
+        #       <li id="bookmark_12345" class="bookmark blurb group" role="article">
+        #         ...
+        #       </li>
+        #       <li id="bookmark_67890" class="bookmark blurb group" role="article">
+        #         ...
+        #       </li>
+        #       ...
+        #     </o
+
+        ol_tag = soup.find('ol', attrs={'class': 'bookmark'})
+
+        for li_tag in ol_tag.findAll('li', attrs={'class': 'blurb'}):
+            try:
+                # <h4 class="heading">
+                #     <a href="/works/12345678">Work Title</a>
+                #     <a href="/users/authorname/pseuds/authorpseud" rel="author">Author Name</a>
+                # </h4>
+
+                for h4_tag in li_tag.findAll('h4', attrs={'class': 'heading'}):
+                    for link in h4_tag.findAll('a'):
+                        if ('works' in link.get('href')) and not ('external_works' in link.get('href')):
+                            work_id = link.get('href').replace('/works/', '')
+                            yield 'work', work_id
+            except KeyError:
+                # A deleted work shows up as
+                #
+                #      <li class="deleted reading work blurb group">
+                #
+                # There's nothing that we can do about that, so just skip
+                # over it.
+                if 'deleted' in li_tag.attrs['class']:
+                    pass
+                else:
+                    raise
