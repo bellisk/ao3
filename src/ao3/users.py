@@ -8,6 +8,9 @@ import requests
 
 from .works import Work
 
+WORK_TYPE = 'work'
+SERIES_TYPE = 'series'
+
 
 class User(object):
 
@@ -48,9 +51,12 @@ class User(object):
             soup = BeautifulSoup(req.text, features='html.parser')
 
             for id_type, id in self._get_work_or_series_ids_from_page(soup):
-                if id_type == 'work':
+                if id_type == WORK_TYPE:
                     num_works += 1
                     bookmarks.append(id)
+                elif id_type == SERIES_TYPE:
+                    # handle series bookmarks
+                    pass
 
                 if max_count and num_works == max_count:
                     max_bookmarks_found = True
@@ -280,8 +286,9 @@ class User(object):
                 for h4_tag in li_tag.findAll('h4', attrs={'class': 'heading'}):
                     for link in h4_tag.findAll('a'):
                         if ('works' in link.get('href')) and not ('external_works' in link.get('href')):
-                            work_id = link.get('href').replace('/works/', '')
-                            yield 'work', work_id
+                            yield WORK_TYPE, link.get('href').replace('/works/', '')
+                        elif 'series' in link.get('href'):
+                            yield SERIES_TYPE, link.get('href').replace('/series/', '')
             except KeyError:
                 # A deleted work shows up as
                 #
