@@ -31,10 +31,12 @@ class User(object):
     def __repr__(self):
         return '%s(username=%r)' % (type(self).__name__, self.username)
 
-    def bookmarks_ids(self, max_count=None):
+    def bookmarks_ids(self, max_count=None, expand_series=False):
         """
         Returns a list of the user's bookmarks' ids. Ignores external work bookmarks.
         User must be logged in to see private bookmarks.
+        If expand_series=True, all works in a bookmarked series will be treated
+        as individual bookmarks. Otherwise, series bookmarks will be ignored.
         """
         api_url = (
             'https://archiveofourown.org/users/%s/bookmarks?page=%%d'
@@ -54,12 +56,19 @@ class User(object):
                 if id_type == WORK_TYPE:
                     num_works += 1
                     bookmarks.append(id)
-                elif id_type == SERIES_TYPE:
-                    # handle series bookmarks
-                    pass
+                elif expand_series == True and id_type == SERIES_TYPE:
+                    series_req = self._get_with_timeout(
+                        'https://archiveofourown.org/series/%s'
+                        % id
+                    )
+                    series_soup = BeautifulSoup(series_req.text, features='html.parser')
+                    for t, i in self._get_work_or_series_ids_from_page(series_soup):
+                        num_works += 1
+                        bookmarks.append(i)
 
-                if max_count and num_works == max_count:
+                if max_count and num_works >= max_count:
                     max_bookmarks_found = True
+                    bookmarks = bookmarks[0:max_count]
                     break
 
             if max_bookmarks_found:
@@ -82,7 +91,7 @@ class User(object):
 
         return bookmarks
 
-    def bookmarks(self, max_count=None):
+    def bookmarks(self, max_count=None, expand_series=False):
         """
         Returns a list of the user's bookmarks as Work objects.
         Takes forever.
@@ -90,7 +99,7 @@ class User(object):
         """
 
         bookmark_total = 0
-        bookmark_ids = self.bookmarks_ids(max_count)
+        bookmark_ids = self.bookmarks_ids(max_count, expand_series)
         bookmarks = []
 
         for bookmark_id in bookmark_ids:
@@ -262,21 +271,29 @@ class User(object):
                 break
 
     def _get_work_or_series_ids_from_page(self, soup):
-        # The entries are stored in a list of the form:
+        # Entries on a bookmarks page are stored in a list of the form:
         #
         #     <ol class="bookmark index group">
         #       <li id="bookmark_12345" class="bookmark blurb group" role="article">
         #         ...
         #       </li>
-        #       <li id="bookmark_67890" class="bookmark blurb group" role="article">
+        #       ...
+        #     </o>
+        #
+        # Entries on a series page are stored in a list of the form:
+        #
+        #     <ul class ="series work index group">
+        #       <li class="work blurb group" id="work_12345" role="article">
         #         ...
         #       </li>
         #       ...
-        #     </o
+        #     </ul>
 
-        ol_tag = soup.find('ol', attrs={'class': 'bookmark'})
+        list_tag = soup.find('ol', attrs={'class': 'bookmark'})
+        if not list_tag:
+            list_tag = soup.find('ul', attrs={'class': 'series'})
 
-        for li_tag in ol_tag.findAll('li', attrs={'class': 'blurb'}):
+        for li_tag in list_tag.findAll('li', attrs={'class': 'blurb'}):
             try:
                 # <h4 class="heading">
                 #     <a href="/works/12345678">Work Title</a>
