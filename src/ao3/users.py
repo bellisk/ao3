@@ -1,29 +1,23 @@
 from datetime import datetime
-import collections
 import itertools
 import re
 import time
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 import requests
+
+from .works import Work
+
+WORK_TYPE = 'work'
+SERIES_TYPE = 'series'
 
 
 class User(object):
 
-#   instead of passing plaintext passwords, pass the contents of the _otwarchive_session cookie!
+    # instead of passing plaintext passwords, pass the contents of the _otwarchive_session cookie!
     def __init__(self, username, cookie):
         self.username = username
         sess = requests.Session()
-#       previously, used password
-#        req = sess.post('https://archiveofourown.org/user_sessions', params={
-#            'user_session[login]': username,
-#            'user_session[password]': password,
-#        })
-        # Unfortunately AO3 doesn't use HTTP status codes to communicate
-        # results -- it's a 200 even if the login fails.
-#        if 'Please try again' in req.text:
-#            raise RuntimeError(
-#                'Error logging in to AO3; is your password correct?')
 
         jar=requests.cookies.RequestsCookieJar()
         jar.set('_otwarchive_session',cookie,domain='archiveofourown.org')  #must be done separately bc the set func returns a cookie, not a jar
@@ -36,6 +30,86 @@ class User(object):
 
     def __repr__(self):
         return '%s(username=%r)' % (type(self).__name__, self.username)
+
+    def bookmarks_ids(self, max_count=None, expand_series=False):
+        """
+        Returns a list of the user's bookmarks' ids. Ignores external work bookmarks.
+        User must be logged in to see private bookmarks.
+        If expand_series=True, all works in a bookmarked series will be treated
+        as individual bookmarks. Otherwise, series bookmarks will be ignored.
+        """
+        api_url = (
+            'https://archiveofourown.org/users/%s/bookmarks?page=%%d'
+            % self.username)
+
+        bookmarks = []
+        max_bookmarks_found = False
+
+        num_works = 0
+        for page_no in itertools.count(start=1):
+            print("Finding page: \t" + str(page_no) + " of bookmarks. \t" + str(num_works) + " bookmarks ids found.")
+
+            req = self._get_with_timeout(api_url % page_no)
+            soup = BeautifulSoup(req.text, features='html.parser')
+
+            for id_type, id in self._get_work_or_series_ids_from_page(soup):
+                if id_type == WORK_TYPE:
+                    num_works += 1
+                    bookmarks.append(id)
+                elif expand_series == True and id_type == SERIES_TYPE:
+                    series_req = self._get_with_timeout(
+                        'https://archiveofourown.org/series/%s'
+                        % id
+                    )
+                    series_soup = BeautifulSoup(series_req.text, features='html.parser')
+                    for t, i in self._get_work_or_series_ids_from_page(series_soup):
+                        num_works += 1
+                        bookmarks.append(i)
+
+                if max_count and num_works >= max_count:
+                    max_bookmarks_found = True
+                    bookmarks = bookmarks[0:max_count]
+                    break
+
+            if max_bookmarks_found:
+                break
+
+            # The pagination button at the end of the page is of the form
+            #
+            #     <li class="next" title="next"> ... </li>
+            #
+            # If there's another page of results, this contains an <a> tag
+            # pointing to the next page.  Otherwise, it contains a <span>
+            # tag with the 'disabled' class.
+            try:
+                next_button = soup.find('li', attrs={'class': 'next'})
+                if next_button.find('span', attrs={'class': 'disabled'}):
+                    break
+            except:
+                # In case of absence of "next"
+                break
+
+        return bookmarks
+
+    def bookmarks(self, max_count=None, expand_series=False):
+        """
+        Returns a list of the user's bookmarks as Work objects.
+        Takes forever.
+        User must be logged in to see private bookmarks.
+        """
+
+        bookmark_total = 0
+        bookmark_ids = self.bookmarks_ids(max_count, expand_series)
+        bookmarks = []
+
+        for bookmark_id in bookmark_ids:
+            work = Work(bookmark_id, self.sess)
+            bookmarks.append(work)
+
+            bookmark_total = bookmark_total + 1
+            print((str(bookmark_total) + "\t bookmarks found."))
+
+        return bookmarks
 
     def reading_history(self):
         """Returns a list of articles in the user's reading history.
@@ -58,11 +132,11 @@ class User(object):
             req = self.sess.get(api_url % page_no)
             print("On page: "+str(page_no))
             print("Cumulative deleted works encountered: "+str(self.deleted))
-            
+
             #if timeout, wait and try again
             while len(req.text) < 20 and "Retry later" in req.text:
                 print("timeout... waiting 3 mins and trying again")
-                time.sleep(180) 
+                time.sleep(180)
                 req = self.sess.get(api_url % page_no)
 
             soup = BeautifulSoup(req.text, features='html.parser')
@@ -98,7 +172,7 @@ class User(object):
                         r'[0-9]{1,2} [A-Z][a-z]+ [0-9]{4}',
                         h4_tag.contents[2]).group(0)
                     date = datetime.strptime(date_str, '%d %b %Y').date()
-                    
+
                     if "Visited once" in h4_tag.contents[2]:
                         numvisits='1' #TODO: probably want to change these int values to ints instead of strings...
                     else:
@@ -137,7 +211,7 @@ class User(object):
                     if chapters.find('a') is not None:
                         chapters.find('a').replaceWithChildren()
                     chapters=''.join(chapters.contents)
-                    hits=str(li_tag.find('dd',attrs={'class','hits'}).contents[0]) 
+                    hits=str(li_tag.find('dd',attrs={'class','hits'}).contents[0])
 
                     #sometimes the word count is blank
                     words_tag=li_tag.find('dd',attrs={'class','words'})
@@ -145,7 +219,7 @@ class User(object):
                         words='0'
                     else:
                         words=str(words_tag.contents[0])
-                        
+
                     #for comments/kudos/bookmarks, need to check if the tag exists, bc if there are no comments etc it will not exist
                     comments_tag=li_tag.find('dd',attrs={'class','comments'})
                     if comments_tag is not None:
@@ -195,3 +269,62 @@ class User(object):
             next_button = soup.find('li', attrs={'class': 'next'})
             if next_button.find('span', attrs={'class': 'disabled'}):
                 break
+
+    def _get_work_or_series_ids_from_page(self, soup):
+        # Entries on a bookmarks page are stored in a list of the form:
+        #
+        #     <ol class="bookmark index group">
+        #       <li id="bookmark_12345" class="bookmark blurb group" role="article">
+        #         ...
+        #       </li>
+        #       ...
+        #     </o>
+        #
+        # Entries on a series page are stored in a list of the form:
+        #
+        #     <ul class ="series work index group">
+        #       <li class="work blurb group" id="work_12345" role="article">
+        #         ...
+        #       </li>
+        #       ...
+        #     </ul>
+
+        list_tag = soup.find('ol', attrs={'class': 'bookmark'})
+        if not list_tag:
+            list_tag = soup.find('ul', attrs={'class': 'series'})
+
+        for li_tag in list_tag.findAll('li', attrs={'class': 'blurb'}):
+            try:
+                # <h4 class="heading">
+                #     <a href="/works/12345678">Work Title</a>
+                #     <a href="/users/authorname/pseuds/authorpseud" rel="author">Author Name</a>
+                # </h4>
+
+                for h4_tag in li_tag.findAll('h4', attrs={'class': 'heading'}):
+                    for link in h4_tag.findAll('a'):
+                        if ('works' in link.get('href')) and not ('external_works' in link.get('href')):
+                            yield WORK_TYPE, link.get('href').replace('/works/', '')
+                        elif 'series' in link.get('href'):
+                            yield SERIES_TYPE, link.get('href').replace('/series/', '')
+            except KeyError:
+                # A deleted work shows up as
+                #
+                #      <li class="deleted reading work blurb group">
+                #
+                # There's nothing that we can do about that, so just skip
+                # over it.
+                if 'deleted' in li_tag.attrs['class']:
+                    pass
+                else:
+                    raise
+
+    def _get_with_timeout(self, url):
+        req = self.sess.get(url)
+
+        # if timeout, wait and try again
+        while len(req.text) < 20 and "Retry later" in req.text:
+            print("timeout... waiting 3 mins and trying again")
+            time.sleep(180)
+            req = self.sess.get(url)
+
+        return req
