@@ -44,14 +44,7 @@ class User(object):
         for page_no in itertools.count(start=1):
             print("Finding page: \t" + str(page_no) + " of bookmarks. \t" + str(num_works) + " bookmarks ids found.")
 
-            req = self.sess.get(api_url % page_no)
-
-            # if timeout, wait and try again
-            while len(req.text) < 20 and "Retry later" in req.text:
-                print("timeout... waiting 3 mins and trying again")
-                time.sleep(180)
-                req = self.sess.get(api_url % page_no)
-
+            req = self._get_with_timeout(api_url % page_no)
             soup = BeautifulSoup(req.text, features='html.parser')
 
             for id_type, id in self._get_work_or_series_ids_from_page(soup):
@@ -300,3 +293,14 @@ class User(object):
                     pass
                 else:
                     raise
+
+    def _get_with_timeout(self, url):
+        req = self.sess.get(url)
+
+        # if timeout, wait and try again
+        while len(req.text) < 20 and "Retry later" in req.text:
+            print("timeout... waiting 3 mins and trying again")
+            time.sleep(180)
+            req = self.sess.get(url)
+
+        return req
