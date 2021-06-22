@@ -31,7 +31,7 @@ class User(object):
     def __repr__(self):
         return '%s(username=%r)' % (type(self).__name__, self.username)
 
-    def bookmarks_ids(self, max_count=None, expand_series=False):
+    def bookmarks_ids(self, max_count=None, expand_series=False, oldest_date=None):
         """
         Returns a list of the user's bookmarks' ids. Ignores external work bookmarks.
         User must be logged in to see private bookmarks.
@@ -41,28 +41,31 @@ class User(object):
         return self._get_list_of_ids(
             'https://archiveofourown.org/users/%s/bookmarks?page=%%d',
             max_count,
-            expand_series
+            expand_series,
+            oldest_date
         )
 
-    def marked_for_later_ids(self, max_count=None):
+    def marked_for_later_ids(self, max_count=None, oldest_date=None):
         """
         Returns a list of the user's marked-for-later ids.
         Does not currently handle expanding series.
         """
         return self._get_list_of_ids(
             'https://archiveofourown.org/users/%s/readings?show=to-read&page=%%d',
-            max_count
+            max_count,
+            oldest_date
         )
 
 
-    def _get_list_of_ids(self, url, max_count=None, expand_series=False):
+    def _get_list_of_ids(self, list_url, max_count=None, expand_series=False, oldest_date=None):
         """
-        Returns a list of the user's bookmarks' ids. Ignores external work bookmarks.
+        Returns a list of work ids from a paginated list.
+        Ignores external work bookmarks.
         User must be logged in to see private bookmarks.
         If expand_series=True, all works in a bookmarked series will be treated
         as individual bookmarks. Otherwise, series bookmarks will be ignored.
         """
-        api_url = (url % self.username)
+        api_url = (list_url % self.username)
 
         bookmarks = []
         max_bookmarks_found = False
