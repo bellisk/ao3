@@ -10,6 +10,7 @@ from .works import Work
 
 WORK_TYPE = 'work'
 SERIES_TYPE = 'series'
+AO3_DATE_FORMAT = '%d %b %Y'
 
 
 class User(object):
@@ -53,6 +54,7 @@ class User(object):
         return self._get_list_of_ids(
             'https://archiveofourown.org/users/%s/readings?show=to-read&page=%%d',
             max_count,
+            False,
             oldest_date
         )
 
@@ -77,7 +79,13 @@ class User(object):
             req = self._get_with_timeout(api_url % page_no)
             soup = BeautifulSoup(req.text, features='html.parser')
 
-            for id_type, id in self._get_work_or_series_ids_from_page(soup):
+            for id_type, id, date in self._get_work_or_series_ids_from_page(soup):
+                if oldest_date and date and date < oldest_date:
+                    print("Last interaction with " + id_type + " " + id + " was on " + datetime.strftime(date, AO3_DATE_FORMAT))
+                    print("Stopping here")
+                    max_bookmarks_found = True
+                    break
+
                 if id_type == WORK_TYPE:
                     num_works += 1
                     bookmarks.append(id)
@@ -87,7 +95,7 @@ class User(object):
                         % id
                     )
                     series_soup = BeautifulSoup(series_req.text, features='html.parser')
-                    for t, i in self._get_work_or_series_ids_from_page(series_soup):
+                    for t, i, d in self._get_work_or_series_ids_from_page(series_soup):
                         num_works += 1
                         bookmarks.append(i)
 
@@ -330,7 +338,12 @@ class User(object):
             list_tag = soup.find('ul', attrs={'class': 'series'})
 
         for li_tag in list_tag.findAll('li', attrs={'class': 'blurb'}):
+            # TODO: get date bookmarked or last visited (for reading history)
+            # and include it in the yield.
+            # For items that don't have one of these dates, just yield None.
+
             try:
+                date = self._get_user_interaction_date(li_tag)
                 # <h4 class="heading">
                 #     <a href="/works/12345678">Work Title</a>
                 #     <a href="/users/authorname/pseuds/authorpseud" rel="author">Author Name</a>
@@ -339,9 +352,9 @@ class User(object):
                 for h4_tag in li_tag.findAll('h4', attrs={'class': 'heading'}):
                     for link in h4_tag.findAll('a'):
                         if ('works' in link.get('href')) and not ('external_works' in link.get('href')):
-                            yield WORK_TYPE, link.get('href').replace('/works/', '')
+                            yield WORK_TYPE, link.get('href').replace('/works/', ''), date
                         elif 'series' in link.get('href'):
-                            yield SERIES_TYPE, link.get('href').replace('/series/', '')
+                            yield SERIES_TYPE, link.get('href').replace('/series/', ''), date
             except KeyError:
                 # A deleted work shows up as
                 #
@@ -364,3 +377,22 @@ class User(object):
             req = self.sess.get(url)
 
         return req
+
+    def _get_user_interaction_date(self, li_tag):
+        """Get a date from an li tag corresponding to a work, and return it as
+         a datetime object.
+        For bookmarked works, this will be the date of bookmarking.
+        For marked-for-later works, it's the date last visited.
+        For other works (from pages where we don't see information about the
+        user's interaction with fics), return None.
+        """
+        for div in li_tag.findAll('div', attrs={'class': 'user'}):
+            for p in div.findAll('p', attrs={'class': 'datetime'}):
+                return datetime.strptime(p.text, AO3_DATE_FORMAT)
+
+            last_visited = re.compile('Last visited: ([0-9]{2} [a-zA-Z]{3} [0-9]{4})')
+            for h4 in div.findAll('h4', attrs={'class': 'viewed'}):
+                date = last_visited.search(h4.text).group(1)
+                return datetime.strptime(date, AO3_DATE_FORMAT)
+
+        return None
