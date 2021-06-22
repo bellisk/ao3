@@ -38,16 +38,38 @@ class User(object):
         If expand_series=True, all works in a bookmarked series will be treated
         as individual bookmarks. Otherwise, series bookmarks will be ignored.
         """
-        api_url = (
-            'https://archiveofourown.org/users/%s/bookmarks?page=%%d'
-            % self.username)
+        return self._get_list_of_ids(
+            'https://archiveofourown.org/users/%s/bookmarks?page=%%d',
+            max_count,
+            expand_series
+        )
+
+    def marked_for_later_ids(self, max_count=None):
+        """
+        Returns a list of the user's marked-for-later ids.
+        Does not currently handle expanding series.
+        """
+        return self._get_list_of_ids(
+            'https://archiveofourown.org/users/%s/readings?show=to-read&page=%%d',
+            max_count
+        )
+
+
+    def _get_list_of_ids(self, url, max_count=None, expand_series=False):
+        """
+        Returns a list of the user's bookmarks' ids. Ignores external work bookmarks.
+        User must be logged in to see private bookmarks.
+        If expand_series=True, all works in a bookmarked series will be treated
+        as individual bookmarks. Otherwise, series bookmarks will be ignored.
+        """
+        api_url = (url % self.username)
 
         bookmarks = []
         max_bookmarks_found = False
 
         num_works = 0
         for page_no in itertools.count(start=1):
-            print("Finding page: \t" + str(page_no) + " of bookmarks. \t" + str(num_works) + " bookmarks ids found.")
+            print("Finding page: \t" + str(page_no) + " of list. \t" + str(num_works) + " ids found.")
 
             req = self._get_with_timeout(api_url % page_no)
             soup = BeautifulSoup(req.text, features='html.parser')
@@ -280,6 +302,15 @@ class User(object):
         #       ...
         #     </o>
         #
+        # Entries on a reading page are stored in a list of the form:
+        #
+        #     <ol class ="reading work index group">
+        #       <li class="reading work blurb group" id="work_12345" role="article">
+        #         ...
+        #       </li>
+        #       ...
+        #     </ul>
+        #
         # Entries on a series page are stored in a list of the form:
         #
         #     <ul class ="series work index group">
@@ -290,6 +321,8 @@ class User(object):
         #     </ul>
 
         list_tag = soup.find('ol', attrs={'class': 'bookmark'})
+        if not list_tag:
+            list_tag = soup.find('ol', attrs={'class': 'reading'})
         if not list_tag:
             list_tag = soup.find('ul', attrs={'class': 'series'})
 
