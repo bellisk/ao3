@@ -10,6 +10,7 @@ from .works import Work
 
 WORK_TYPE = 'work'
 SERIES_TYPE = 'series'
+AO3_DATE_FORMAT = '%d %b %Y'
 
 
 class User(object):
@@ -31,28 +32,60 @@ class User(object):
     def __repr__(self):
         return '%s(username=%r)' % (type(self).__name__, self.username)
 
-    def bookmarks_ids(self, max_count=None, expand_series=False):
+    def bookmarks_ids(self, max_count=None, expand_series=False, oldest_date=None):
         """
         Returns a list of the user's bookmarks' ids. Ignores external work bookmarks.
         User must be logged in to see private bookmarks.
         If expand_series=True, all works in a bookmarked series will be treated
         as individual bookmarks. Otherwise, series bookmarks will be ignored.
         """
-        api_url = (
-            'https://archiveofourown.org/users/%s/bookmarks?page=%%d'
-            % self.username)
+        return self._get_list_of_ids(
+            'https://archiveofourown.org/users/%s/bookmarks?page=%%d',
+            max_count,
+            expand_series,
+            oldest_date
+        )
+
+    def marked_for_later_ids(self, max_count=None, oldest_date=None):
+        """
+        Returns a list of the user's marked-for-later ids.
+        Does not currently handle expanding series.
+        """
+        return self._get_list_of_ids(
+            'https://archiveofourown.org/users/%s/readings?show=to-read&page=%%d',
+            max_count,
+            False,
+            oldest_date
+        )
+
+
+    def _get_list_of_ids(self, list_url, max_count=None, expand_series=False, oldest_date=None):
+        """
+        Returns a list of work ids from a paginated list.
+        Ignores external work bookmarks.
+        User must be logged in to see private bookmarks.
+        If expand_series=True, all works in a bookmarked series will be treated
+        as individual bookmarks. Otherwise, series bookmarks will be ignored.
+        """
+        api_url = (list_url % self.username)
 
         bookmarks = []
         max_bookmarks_found = False
 
         num_works = 0
         for page_no in itertools.count(start=1):
-            print("Finding page: \t" + str(page_no) + " of bookmarks. \t" + str(num_works) + " bookmarks ids found.")
+            print("Finding page: \t" + str(page_no) + " of list. \t" + str(num_works) + " ids found.")
 
             req = self._get_with_timeout(api_url % page_no)
             soup = BeautifulSoup(req.text, features='html.parser')
 
-            for id_type, id in self._get_work_or_series_ids_from_page(soup):
+            for id_type, id, date in self._get_work_or_series_ids_from_page(soup):
+                if oldest_date and date and date < oldest_date:
+                    print("Last interaction with " + id_type + " " + id + " was on " + datetime.strftime(date, AO3_DATE_FORMAT))
+                    print("Stopping here")
+                    max_bookmarks_found = True
+                    break
+
                 if id_type == WORK_TYPE:
                     num_works += 1
                     bookmarks.append(id)
@@ -62,7 +95,7 @@ class User(object):
                         % id
                     )
                     series_soup = BeautifulSoup(series_req.text, features='html.parser')
-                    for t, i in self._get_work_or_series_ids_from_page(series_soup):
+                    for t, i, d in self._get_work_or_series_ids_from_page(series_soup):
                         num_works += 1
                         bookmarks.append(i)
 
@@ -117,7 +150,7 @@ class User(object):
         This requires the user to turn on the Viewing History feature.
 
         Generates a tuple of work_id,date,numvisits,title,author,fandom,warnings,relationships,characters,freeforms,words,chapters,comments,kudos,bookmarks,hits,pubdate
-        Note that the dates are datetime objects, but everything else is either a list of strings (if multiple values) or a string. 
+        Note that the dates are datetime objects, but everything else is either a list of strings (if multiple values) or a string.
 
         """
         # TODO: What happens if you don't have this feature enabled?
@@ -280,6 +313,15 @@ class User(object):
         #       ...
         #     </o>
         #
+        # Entries on a reading page are stored in a list of the form:
+        #
+        #     <ol class ="reading work index group">
+        #       <li class="reading work blurb group" id="work_12345" role="article">
+        #         ...
+        #       </li>
+        #       ...
+        #     </ul>
+        #
         # Entries on a series page are stored in a list of the form:
         #
         #     <ul class ="series work index group">
@@ -291,10 +333,13 @@ class User(object):
 
         list_tag = soup.find('ol', attrs={'class': 'bookmark'})
         if not list_tag:
+            list_tag = soup.find('ol', attrs={'class': 'reading'})
+        if not list_tag:
             list_tag = soup.find('ul', attrs={'class': 'series'})
 
         for li_tag in list_tag.findAll('li', attrs={'class': 'blurb'}):
             try:
+                date = self._get_user_interaction_date(li_tag)
                 # <h4 class="heading">
                 #     <a href="/works/12345678">Work Title</a>
                 #     <a href="/users/authorname/pseuds/authorpseud" rel="author">Author Name</a>
@@ -303,9 +348,9 @@ class User(object):
                 for h4_tag in li_tag.findAll('h4', attrs={'class': 'heading'}):
                     for link in h4_tag.findAll('a'):
                         if ('works' in link.get('href')) and not ('external_works' in link.get('href')):
-                            yield WORK_TYPE, link.get('href').replace('/works/', '')
+                            yield WORK_TYPE, link.get('href').replace('/works/', ''), date
                         elif 'series' in link.get('href'):
-                            yield SERIES_TYPE, link.get('href').replace('/series/', '')
+                            yield SERIES_TYPE, link.get('href').replace('/series/', ''), date
             except KeyError:
                 # A deleted work shows up as
                 #
@@ -328,3 +373,22 @@ class User(object):
             req = self.sess.get(url)
 
         return req
+
+    def _get_user_interaction_date(self, li_tag):
+        """Get a date from an li tag corresponding to a work, and return it as
+         a datetime object.
+        For bookmarked works, this will be the date of bookmarking.
+        For marked-for-later works, it's the date last visited.
+        For other works (from pages where we don't see information about the
+        user's interaction with fics), return None.
+        """
+        for div in li_tag.findAll('div', attrs={'class': 'user'}):
+            for p in div.findAll('p', attrs={'class': 'datetime'}):
+                return datetime.strptime(p.text, AO3_DATE_FORMAT)
+
+            last_visited = re.compile('Last visited: ([0-9]{2} [a-zA-Z]{3} [0-9]{4})')
+            for h4 in div.findAll('h4', attrs={'class': 'viewed'}):
+                date = last_visited.search(h4.text).group(1)
+                return datetime.strptime(date, AO3_DATE_FORMAT)
+
+        return None
