@@ -150,7 +150,7 @@ class User(object):
         This requires the user to turn on the Viewing History feature.
 
         Generates a tuple of work_id,date,numvisits,title,author,fandom,warnings,relationships,characters,freeforms,words,chapters,comments,kudos,bookmarks,hits,pubdate
-        Note that the dates are datetime objects, but everything else is either a list of strings (if multiple values) or a string. 
+        Note that the dates are datetime objects, but everything else is either a list of strings (if multiple values) or a string.
 
         """
         # TODO: What happens if you don't have this feature enabled?
@@ -338,10 +338,6 @@ class User(object):
             list_tag = soup.find('ul', attrs={'class': 'series'})
 
         for li_tag in list_tag.findAll('li', attrs={'class': 'blurb'}):
-            # TODO: get date bookmarked or last visited (for reading history)
-            # and include it in the yield.
-            # For items that don't have one of these dates, just yield None.
-
             try:
                 date = self._get_user_interaction_date(li_tag)
                 # <h4 class="heading">
