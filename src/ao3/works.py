@@ -86,7 +86,7 @@ class Work(object):
         #     <h3 class="byline heading">
         #       <a href="/users/[author_name]" rel="author">[author_name]</a>
         #     </h3>
-        # 
+        #
         # Unless the author is anonymous... in which case there is no link
         #
         byline_tag = self._soup.find('h3', attrs={'class': 'byline'})
@@ -124,7 +124,7 @@ class Work(object):
         #
         dd_tag = self._soup.find('dd', attrs={'class': class_name})
         if 'tags' in dd_tag.attrs['class']:
-            return self._lookup_list_stat(dd_tag=dd_tag)  
+            return self._lookup_list_stat(dd_tag=dd_tag)
         return dd_tag.contents[0]
 
     def _lookup_list_stat(self, dd_tag):
@@ -324,3 +324,53 @@ class Work(object):
             }
         }
         return json.dumps(data, *args, **kwargs)
+
+
+class HistoryEntry(Work):
+    """
+    A Work that we found via the reading history page, which gives us extra
+    information about it.
+    """
+    def __init__(self, id, last_visit, num_visits, sess=None):
+        super(HistoryEntry, self).__init__(self, id, sess)
+
+        self.last_visit = last_visit
+        self.num_visits = num_visits
+
+    def json(self, *args, **kwargs):
+
+        """Provide a complete representation of the work in JSON.
+
+        *args and **kwargs are passed directly to `json.dumps()` from the
+        standard library.
+
+        """
+        data = {
+            'id': self.id,
+            'title': self.title,
+            'author': self.author,
+            'summary': self.summary,
+            'rating': self.rating,
+            'warnings': self.warnings,
+            'category': self.category,
+            'fandoms': self.fandoms,
+            'relationship': self.relationship,
+            'characters': self.characters,
+            'additional_tags': self.additional_tags,
+            'language': self.language,
+            'collections': self.collections,
+            'last_visit': self.last_visit,
+            'num_visits': self.num_visits,
+            'stats': {
+                'published': str(self.published),
+                'completed': str(self.completed),
+                'words': self.words,
+                # TODO: chapters
+                'comments': self.comments,
+                'kudos': self.kudos,
+                'bookmarks': self.bookmarks,
+                'hits': self.hits,
+            }
+        }
+        return json.dumps(data, *args, **kwargs)
+
