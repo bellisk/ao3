@@ -11,6 +11,8 @@ from .works import Work
 WORK_TYPE = 'work'
 SERIES_TYPE = 'series'
 AO3_DATE_FORMAT = '%d %b %Y'
+DATE_UPDATED = 'updated'
+DATE_INTERACTED_WITH = 'interacted'
 
 
 class User(object):
@@ -32,18 +34,29 @@ class User(object):
     def __repr__(self):
         return '%s(username=%r)' % (type(self).__name__, self.username)
 
-    def bookmarks_ids(self, max_count=None, expand_series=False, oldest_date=None):
+    def bookmarks_ids(self, max_count=None, expand_series=False, oldest_date=None, sort_by_updated=False):
         """
         Returns a list of the user's bookmarks' ids. Ignores external work bookmarks.
         User must be logged in to see private bookmarks.
         If expand_series=True, all works in a bookmarked series will be treated
         as individual bookmarks. Otherwise, series bookmarks will be ignored.
+        If sort_by_created=True, bookmarks are sorted by date the work was last
+        updated, descending. Otherwise, sorting is by date the bookmark was created,
+        descending.
         """
+        url = 'https://archiveofourown.org/users/%s/bookmarks?page=%%d'
+        date_type = DATE_INTERACTED_WITH
+
+        if sort_by_updated:
+            url += '&bookmark_search[sort_column]=bookmarkable_date'
+            date_type = DATE_UPDATED
+
         return self._get_list_of_ids(
-            'https://archiveofourown.org/users/%s/bookmarks?page=%%d',
+            url,
             max_count,
             expand_series,
-            oldest_date
+            oldest_date,
+            date_type
         )
 
     def marked_for_later_ids(self, max_count=None, oldest_date=None):
@@ -55,11 +68,12 @@ class User(object):
             'https://archiveofourown.org/users/%s/readings?show=to-read&page=%%d',
             max_count,
             False,
-            oldest_date
+            oldest_date,
+            DATE_INTERACTED_WITH
         )
 
 
-    def _get_list_of_ids(self, list_url, max_count=None, expand_series=False, oldest_date=None):
+    def _get_list_of_ids(self, list_url, max_count=None, expand_series=False, oldest_date=None, date_type=''):
         """
         Returns a list of work ids from a paginated list.
         Ignores external work bookmarks.
@@ -79,7 +93,7 @@ class User(object):
             req = self._get_with_timeout(api_url % page_no)
             soup = BeautifulSoup(req.text, features='html.parser')
 
-            for id_type, id, date in self._get_work_or_series_ids_from_page(soup):
+            for id_type, id, date in self._get_ids_and_dates_from_page(soup, date_type):
                 if oldest_date and date and date < oldest_date:
                     print("Last interaction with " + id_type + " " + id + " was on " + datetime.strftime(date, AO3_DATE_FORMAT))
                     print("Stopping here")
@@ -95,7 +109,7 @@ class User(object):
                         % id
                     )
                     series_soup = BeautifulSoup(series_req.text, features='html.parser')
-                    for t, i, d in self._get_work_or_series_ids_from_page(series_soup):
+                    for t, i, d in self._get_ids_and_dates_from_page(series_soup, date_type):
                         num_works += 1
                         bookmarks.append(i)
 
@@ -303,7 +317,7 @@ class User(object):
             if next_button.find('span', attrs={'class': 'disabled'}):
                 break
 
-    def _get_work_or_series_ids_from_page(self, soup):
+    def _get_ids_and_dates_from_page(self, soup, date_type):
         # Entries on a bookmarks page are stored in a list of the form:
         #
         #     <ol class="bookmark index group">
@@ -339,7 +353,10 @@ class User(object):
 
         for li_tag in list_tag.findAll('li', attrs={'class': 'blurb'}):
             try:
-                date = self._get_user_interaction_date(li_tag)
+                if date_type == DATE_UPDATED:
+                    date = self._get_work_update_date(li_tag)
+                else:
+                    date = self._get_user_interaction_date(li_tag)
                 # <h4 class="heading">
                 #     <a href="/works/12345678">Work Title</a>
                 #     <a href="/users/authorname/pseuds/authorpseud" rel="author">Author Name</a>
@@ -392,3 +409,9 @@ class User(object):
                 return datetime.strptime(date, AO3_DATE_FORMAT)
 
         return None
+
+    def _get_work_update_date(self, li_tag):
+        for div in li_tag.findAll('div', attrs={'class': 'header'}):
+            for p in div.findAll('p', attrs={'class': 'datetime'}):
+                return datetime.strptime(p.text, AO3_DATE_FORMAT)
+
