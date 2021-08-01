@@ -51,7 +51,7 @@ class User(object):
             url += '&bookmark_search[sort_column]=bookmarkable_date'
             date_type = DATE_UPDATED
 
-        return self._get_list_of_ids(
+        return self._get_list_of_work_ids(
             url,
             max_count,
             expand_series,
@@ -64,7 +64,7 @@ class User(object):
         Returns a list of the user's marked-for-later ids.
         Does not currently handle expanding series.
         """
-        return self._get_list_of_ids(
+        return self._get_list_of_work_ids(
             'https://archiveofourown.org/users/%s/readings?show=to-read&page=%%d',
             max_count,
             False,
@@ -73,7 +73,8 @@ class User(object):
         )
 
 
-    def _get_list_of_ids(self, list_url, max_count=None, expand_series=False, oldest_date=None, date_type=''):
+
+    def _get_list_of_work_ids(self, list_url, max_count=None, expand_series=False, oldest_date=None, date_type=''):
         """
         Returns a list of work ids from a paginated list.
         Ignores external work bookmarks.
@@ -83,8 +84,8 @@ class User(object):
         """
         api_url = (list_url % self.username)
 
-        bookmarks = []
-        max_bookmarks_found = False
+        work_ids = []
+        max_works_found = False
 
         num_works = 0
         for page_no in itertools.count(start=1):
@@ -97,12 +98,12 @@ class User(object):
                 if oldest_date and date and date < oldest_date:
                     print("Last interaction with " + id_type + " " + id + " was on " + datetime.strftime(date, AO3_DATE_FORMAT))
                     print("Stopping here")
-                    max_bookmarks_found = True
+                    max_works_found = True
                     break
 
                 if id_type == WORK_TYPE:
                     num_works += 1
-                    bookmarks.append(id)
+                    work_ids.append(id)
                 elif expand_series == True and id_type == SERIES_TYPE:
                     series_req = self._get_with_timeout(
                         'https://archiveofourown.org/series/%s'
@@ -111,14 +112,14 @@ class User(object):
                     series_soup = BeautifulSoup(series_req.text, features='html.parser')
                     for t, i, d in self._get_ids_and_dates_from_page(series_soup, date_type):
                         num_works += 1
-                        bookmarks.append(i)
+                        work_ids.append(i)
 
                 if max_count and num_works >= max_count:
-                    max_bookmarks_found = True
-                    bookmarks = bookmarks[0:max_count]
+                    max_works_found = True
+                    work_ids = work_ids[0:max_count]
                     break
 
-            if max_bookmarks_found:
+            if max_works_found:
                 break
 
             # The pagination button at the end of the page is of the form
@@ -136,7 +137,7 @@ class User(object):
                 # In case of absence of "next"
                 break
 
-        return bookmarks
+        return work_ids
 
     def bookmarks(self, max_count=None, expand_series=False):
         """
