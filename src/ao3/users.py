@@ -8,8 +8,9 @@ import requests
 
 from .works import Work
 
-WORK_TYPE = 'work'
-SERIES_TYPE = 'series'
+TYPE_WORKS = 'works'
+TYPE_SERIES = 'series'
+TYPE_USERS = "users"
 AO3_DATE_FORMAT = '%d %b %Y'
 DATE_UPDATED = 'updated'
 DATE_INTERACTED_WITH = 'interacted'
@@ -72,6 +73,24 @@ class User(object):
             DATE_INTERACTED_WITH
         )
 
+    def user_subscriptions(self):
+        """
+        Returns a list of the usernames that the user is subscribed to.
+        """
+
+    def series_subscriptions(self):
+        """
+        Returns a list of the series that the user is subscribed to.
+        """
+
+    def work_subscription_ids(self, max_count=None):
+        """
+        Returns a list of the work ids that the user is subscribed to.
+        """
+        return self._get_list_of_subscription_ids(
+            TYPE_WORKS,
+            max_count,
+        )
 
 
     def _get_list_of_work_ids(self, list_url, max_count=None, expand_series=False, oldest_date=None, date_type=''):
@@ -96,15 +115,14 @@ class User(object):
 
             for id_type, id, date in self._get_ids_and_dates_from_page(soup, date_type):
                 if oldest_date and date and date < oldest_date:
-                    print("Last interaction with " + id_type + " " + id + " was on " + datetime.strftime(date, AO3_DATE_FORMAT))
-                    print("Stopping here")
+                    print(id_type + "/" + id + " has date " + datetime.strftime(date, AO3_DATE_FORMAT) + ". Stopping here.")
                     max_works_found = True
                     break
 
-                if id_type == WORK_TYPE:
+                if id_type == TYPE_WORKS:
                     num_works += 1
                     work_ids.append(id)
-                elif expand_series == True and id_type == SERIES_TYPE:
+                elif expand_series == True and id_type == TYPE_SERIES:
                     series_req = self._get_with_timeout(
                         'https://archiveofourown.org/series/%s'
                         % id
@@ -138,6 +156,63 @@ class User(object):
                 break
 
         return work_ids
+
+
+    def _get_list_of_subscription_ids(self, sub_type=TYPE_WORKS, max_count=None):
+        """
+        Returns a list of ids from a list of the user's subscriptions:
+        work, series or username.
+        """
+        api_url = (
+                'https://archiveofourown.org/users/%s/subscriptions?type=%s&page=%%d' % (self.username, sub_type))
+
+        sub_ids = []
+        max_subs_found = False
+
+        num_subs = 0
+        for page_no in itertools.count(start=1):
+            print("Finding page: \t" + str(page_no) + " of list. \t" + str(num_subs) + " ids found.")
+
+            req = self._get_with_timeout(api_url % page_no)
+            soup = BeautifulSoup(req.text, features='html.parser')
+
+            table_tag = soup.find('dl', attrs={'class': 'subscription'})
+
+            for dt in table_tag.find_all('dt'):
+                for link in dt.find_all('a'):
+                    # For some reason, dt.find('a') is giving a NavigableString instead
+                    # of a tag object, but dt.find_all('a') works. We only want the
+                    # first of the links here.
+                    yield link.get("href").replace("/" + sub_type + "/", "")
+                    break
+
+                num_subs += 1
+                sub_ids.append(id)
+
+                if max_count and num_subs >= max_count:
+                    max_subs_found = True
+                    sub_ids = sub_ids[0:max_count]
+                    break
+
+            if max_subs_found:
+                break
+
+            # The pagination button at the end of the page is of the form
+            #
+            #     <li class="next" title="next"> ... </li>
+            #
+            # If there's another page of results, this contains an <a> tag
+            # pointing to the next page.  Otherwise, it contains a <span>
+            # tag with the 'disabled' class.
+            try:
+                next_button = soup.find('li', attrs={'class': 'next'})
+                if next_button.find('span', attrs={'class': 'disabled'}):
+                    break
+            except:
+                # In case of absence of "next"
+                break
+
+        return sub_ids
 
     def bookmarks(self, max_count=None, expand_series=False):
         """
@@ -358,6 +433,7 @@ class User(object):
                     date = self._get_work_update_date(li_tag)
                 else:
                     date = self._get_user_interaction_date(li_tag)
+
                 # <h4 class="heading">
                 #     <a href="/works/12345678">Work Title</a>
                 #     <a href="/users/authorname/pseuds/authorpseud" rel="author">Author Name</a>
@@ -366,9 +442,9 @@ class User(object):
                 for h4_tag in li_tag.findAll('h4', attrs={'class': 'heading'}):
                     for link in h4_tag.findAll('a'):
                         if ('works' in link.get('href')) and not ('external_works' in link.get('href')):
-                            yield WORK_TYPE, link.get('href').replace('/works/', ''), date
+                            yield TYPE_WORKS, link.get('href').replace('/works/', ''), date
                         elif 'series' in link.get('href'):
-                            yield SERIES_TYPE, link.get('href').replace('/series/', ''), date
+                            yield TYPE_SERIES, link.get('href').replace('/series/', ''), date
             except KeyError:
                 # A deleted work shows up as
                 #
