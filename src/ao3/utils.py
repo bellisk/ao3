@@ -158,13 +158,9 @@ def get_ids_and_dates_from_page(soup, date_type):
     #       </li>
     #       ...
     #     </ul>
-    list_tag = soup.find('ol', attrs={'class': 'bookmark'})
+    list_tag = soup.find('ol', attrs={'class': 'index'})
     if not list_tag:
-        list_tag = soup.find('ol', attrs={'class': 'reading'})
-    if not list_tag:
-        list_tag = soup.find('ul', attrs={'class': 'series'})
-    if not list_tag:
-        list_tag = soup.find('ol', attrs={'class': 'work'})
+        list_tag = soup.find('ul', attrs={'class': 'index'})
 
     for li_tag in list_tag.findAll('li', attrs={'class': 'blurb'}):
         try:
