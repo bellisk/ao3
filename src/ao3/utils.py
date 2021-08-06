@@ -73,9 +73,8 @@ def get_list_of_work_ids(
     work_ids = []
     max_works_found = False
 
-    num_works = 0
     for page_no in itertools.count(start=1):
-        print("Finding page: \t" + str(page_no) + " of list. \t" + str(num_works) + " ids found.")
+        print("Finding page: \t" + str(page_no) + " of list. \t" + str(len(work_ids)) + " ids found.")
 
         req = get_with_timeout(session, list_url % page_no)
         soup = BeautifulSoup(req.text, features='html.parser')
@@ -87,7 +86,6 @@ def get_list_of_work_ids(
                 break
 
             if id_type == TYPE_WORKS:
-                num_works += 1
                 work_ids.append(id)
             elif expand_series is True and id_type == TYPE_SERIES:
                 series_req = get_with_timeout(
@@ -96,10 +94,9 @@ def get_list_of_work_ids(
                 )
                 series_soup = BeautifulSoup(series_req.text, features='html.parser')
                 for t, i, d in get_ids_and_dates_from_page(series_soup, date_type):
-                    num_works += 1
                     work_ids.append(i)
 
-            if max_count and num_works >= max_count:
+            if max_count and len(work_ids) >= max_count:
                 max_works_found = True
                 work_ids = work_ids[0:max_count]
                 break
