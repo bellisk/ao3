@@ -7,6 +7,7 @@ import re
 import time
 
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse
 
 # Regex for extracting the work ID from an AO3 URL.  Designed to match URLs
 # of the form
@@ -63,6 +64,12 @@ def get_list_of_work_ids(
     If expand_series=True, all works in a bookmarked series will be treated
     as individual bookmarks. Otherwise, series bookmarks will be ignored.
     """
+    query = urlparse(list_url)
+    if not query:
+        list_url += '?page=%d'
+    elif 'page' not in query:
+        list_url += '&page=%d'
+
     work_ids = []
     max_works_found = False
 
