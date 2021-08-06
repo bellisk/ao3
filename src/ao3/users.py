@@ -99,11 +99,19 @@ class User(object):
         """
         Returns a list of the usernames that the user is subscribed to.
         """
+        return self._get_list_of_subscription_ids(
+            TYPE_USERS,
+            max_count,
+        )
 
     def series_subscription_ids(self):
         """
         Returns a list of the series that the user is subscribed to.
         """
+        return self._get_list_of_subscription_ids(
+            TYPE_SERIES,
+            max_count,
+        )
 
     def work_subscription_ids(self, max_count=None):
         """
