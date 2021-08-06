@@ -40,7 +40,7 @@ class AO3(object):
         return Comments(id=id,sess=self.session)
 
     def users_work_ids(self, username):
-        url = utils.user_url_from_id(username)
+        url = utils.user_url_from_id(username) + '/works'
         return utils.get_list_of_work_ids(url, self.session)
 
     def series_work_ids(self, series_id):
