@@ -1,18 +1,9 @@
-from datetime import datetime
-import itertools
-import re
-import time
+# -*- encoding: utf-8
 
-from bs4 import BeautifulSoup
 import requests
 
 from .works import Work
-
-WORK_TYPE = 'work'
-SERIES_TYPE = 'series'
-AO3_DATE_FORMAT = '%d %b %Y'
-DATE_UPDATED = 'updated'
-DATE_INTERACTED_WITH = 'interacted'
+from .utils import *
 
 
 class User(object):
@@ -34,29 +25,47 @@ class User(object):
     def __repr__(self):
         return '%s(username=%r)' % (type(self).__name__, self.username)
 
+    def work_ids(self):
+        """
+        Returns a list of the user's works' ids.
+        We must be logged in to see locked works.
+        If sort_by_updated=True, works are sorted by date the work was last
+        updated, descending. Otherwise, sorting is by date the work was created,
+        descending.
+        """
+        url = 'https://archiveofourown.org/works?user_id=%s' % self.username
+        date_type = DATE_UPDATED
+
+        return get_list_of_work_ids(
+            url,
+            self.sess,
+            date_type=date_type,
+        )
+
     def bookmarks_ids(self, max_count=None, expand_series=False, oldest_date=None, sort_by_updated=False):
         """
         Returns a list of the user's bookmarks' ids. Ignores external work bookmarks.
         User must be logged in to see private bookmarks.
         If expand_series=True, all works in a bookmarked series will be treated
         as individual bookmarks. Otherwise, series bookmarks will be ignored.
-        If sort_by_created=True, bookmarks are sorted by date the work was last
+        If sort_by_updated=True, bookmarks are sorted by date the work was last
         updated, descending. Otherwise, sorting is by date the bookmark was created,
         descending.
         """
-        url = 'https://archiveofourown.org/users/%s/bookmarks?page=%%d'
+        url = 'https://archiveofourown.org/users/%s/bookmarks?page=%%d' % self.username
         date_type = DATE_INTERACTED_WITH
 
         if sort_by_updated:
             url += '&bookmark_search[sort_column]=bookmarkable_date'
             date_type = DATE_UPDATED
 
-        return self._get_list_of_ids(
+        return get_list_of_work_ids(
             url,
+            self.sess,
             max_count,
             expand_series,
             oldest_date,
-            date_type
+            date_type,
         )
 
     def marked_for_later_ids(self, max_count=None, oldest_date=None):
@@ -64,79 +73,43 @@ class User(object):
         Returns a list of the user's marked-for-later ids.
         Does not currently handle expanding series.
         """
-        return self._get_list_of_ids(
-            'https://archiveofourown.org/users/%s/readings?show=to-read&page=%%d',
-            max_count,
-            False,
-            oldest_date,
-            DATE_INTERACTED_WITH
+        url = 'https://archiveofourown.org/users/%s/readings?show=to-read' % self.username
+
+        return get_list_of_work_ids(
+            url,
+            self.sess,
+            max_count=max_count,
+            expand_series=False,
+            oldest_date=oldest_date,
+            date_type=DATE_INTERACTED_WITH,
         )
 
-
-    def _get_list_of_ids(self, list_url, max_count=None, expand_series=False, oldest_date=None, date_type=''):
+    def user_subscription_ids(self, max_count=None):
         """
-        Returns a list of work ids from a paginated list.
-        Ignores external work bookmarks.
-        User must be logged in to see private bookmarks.
-        If expand_series=True, all works in a bookmarked series will be treated
-        as individual bookmarks. Otherwise, series bookmarks will be ignored.
+        Returns a list of the usernames that the user is subscribed to.
         """
-        api_url = (list_url % self.username)
+        return self._get_list_of_subscription_ids(
+            TYPE_USERS,
+            max_count,
+        )
 
-        bookmarks = []
-        max_bookmarks_found = False
+    def series_subscription_ids(self, max_count=None):
+        """
+        Returns a list of ids of the series that the user is subscribed to.
+        """
+        return self._get_list_of_subscription_ids(
+            TYPE_SERIES,
+            max_count,
+        )
 
-        num_works = 0
-        for page_no in itertools.count(start=1):
-            print("Finding page: \t" + str(page_no) + " of list. \t" + str(num_works) + " ids found.")
-
-            req = self._get_with_timeout(api_url % page_no)
-            soup = BeautifulSoup(req.text, features='html.parser')
-
-            for id_type, id, date in self._get_ids_and_dates_from_page(soup, date_type):
-                if oldest_date and date and date < oldest_date:
-                    print("Last interaction with " + id_type + " " + id + " was on " + datetime.strftime(date, AO3_DATE_FORMAT))
-                    print("Stopping here")
-                    max_bookmarks_found = True
-                    break
-
-                if id_type == WORK_TYPE:
-                    num_works += 1
-                    bookmarks.append(id)
-                elif expand_series == True and id_type == SERIES_TYPE:
-                    series_req = self._get_with_timeout(
-                        'https://archiveofourown.org/series/%s'
-                        % id
-                    )
-                    series_soup = BeautifulSoup(series_req.text, features='html.parser')
-                    for t, i, d in self._get_ids_and_dates_from_page(series_soup, date_type):
-                        num_works += 1
-                        bookmarks.append(i)
-
-                if max_count and num_works >= max_count:
-                    max_bookmarks_found = True
-                    bookmarks = bookmarks[0:max_count]
-                    break
-
-            if max_bookmarks_found:
-                break
-
-            # The pagination button at the end of the page is of the form
-            #
-            #     <li class="next" title="next"> ... </li>
-            #
-            # If there's another page of results, this contains an <a> tag
-            # pointing to the next page.  Otherwise, it contains a <span>
-            # tag with the 'disabled' class.
-            try:
-                next_button = soup.find('li', attrs={'class': 'next'})
-                if next_button.find('span', attrs={'class': 'disabled'}):
-                    break
-            except:
-                # In case of absence of "next"
-                break
-
-        return bookmarks
+    def work_subscription_ids(self, max_count=None):
+        """
+        Returns a list of the work ids that the user is subscribed to.
+        """
+        return self._get_list_of_subscription_ids(
+            TYPE_WORKS,
+            max_count,
+        )
 
     def bookmarks(self, max_count=None, expand_series=False):
         """
@@ -317,101 +290,60 @@ class User(object):
             if next_button.find('span', attrs={'class': 'disabled'}):
                 break
 
-    def _get_ids_and_dates_from_page(self, soup, date_type):
-        # Entries on a bookmarks page are stored in a list of the form:
-        #
-        #     <ol class="bookmark index group">
-        #       <li id="bookmark_12345" class="bookmark blurb group" role="article">
-        #         ...
-        #       </li>
-        #       ...
-        #     </o>
-        #
-        # Entries on a reading page are stored in a list of the form:
-        #
-        #     <ol class ="reading work index group">
-        #       <li class="reading work blurb group" id="work_12345" role="article">
-        #         ...
-        #       </li>
-        #       ...
-        #     </ul>
-        #
-        # Entries on a series page are stored in a list of the form:
-        #
-        #     <ul class ="series work index group">
-        #       <li class="work blurb group" id="work_12345" role="article">
-        #         ...
-        #       </li>
-        #       ...
-        #     </ul>
-
-        list_tag = soup.find('ol', attrs={'class': 'bookmark'})
-        if not list_tag:
-            list_tag = soup.find('ol', attrs={'class': 'reading'})
-        if not list_tag:
-            list_tag = soup.find('ul', attrs={'class': 'series'})
-
-        for li_tag in list_tag.findAll('li', attrs={'class': 'blurb'}):
-            try:
-                if date_type == DATE_UPDATED:
-                    date = self._get_work_update_date(li_tag)
-                else:
-                    date = self._get_user_interaction_date(li_tag)
-                # <h4 class="heading">
-                #     <a href="/works/12345678">Work Title</a>
-                #     <a href="/users/authorname/pseuds/authorpseud" rel="author">Author Name</a>
-                # </h4>
-
-                for h4_tag in li_tag.findAll('h4', attrs={'class': 'heading'}):
-                    for link in h4_tag.findAll('a'):
-                        if ('works' in link.get('href')) and not ('external_works' in link.get('href')):
-                            yield WORK_TYPE, link.get('href').replace('/works/', ''), date
-                        elif 'series' in link.get('href'):
-                            yield SERIES_TYPE, link.get('href').replace('/series/', ''), date
-            except KeyError:
-                # A deleted work shows up as
-                #
-                #      <li class="deleted reading work blurb group">
-                #
-                # There's nothing that we can do about that, so just skip
-                # over it.
-                if 'deleted' in li_tag.attrs['class']:
-                    pass
-                else:
-                    raise
-
-    def _get_with_timeout(self, url):
-        req = self.sess.get(url)
-
-        # if timeout, wait and try again
-        while len(req.text) < 20 and "Retry later" in req.text:
-            print("timeout... waiting 3 mins and trying again")
-            time.sleep(180)
-            req = self.sess.get(url)
-
-        return req
-
-    def _get_user_interaction_date(self, li_tag):
-        """Get a date from an li tag corresponding to a work, and return it as
-         a datetime object.
-        For bookmarked works, this will be the date of bookmarking.
-        For marked-for-later works, it's the date last visited.
-        For other works (from pages where we don't see information about the
-        user's interaction with fics), return None.
+    def _get_list_of_subscription_ids(self, sub_type=TYPE_WORKS, max_count=None):
         """
-        for div in li_tag.findAll('div', attrs={'class': 'user'}):
-            for p in div.findAll('p', attrs={'class': 'datetime'}):
-                return datetime.strptime(p.text, AO3_DATE_FORMAT)
+        Returns a list of ids from a list of the user's subscriptions:
+        work, series or username.
+        """
+        api_url = (
+                'https://archiveofourown.org/users/%s/subscriptions?type=%s&page=%%d' % (self.username, sub_type))
 
-            last_visited = re.compile('Last visited: ([0-9]{2} [a-zA-Z]{3} [0-9]{4})')
-            for h4 in div.findAll('h4', attrs={'class': 'viewed'}):
-                date = last_visited.search(h4.text).group(1)
-                return datetime.strptime(date, AO3_DATE_FORMAT)
+        sub_ids = []
+        max_subs_found = False
 
-        return None
+        num_subs = 0
+        for page_no in itertools.count(start=1):
+            print("Finding page: \t" + str(page_no) + " of list. \t" + str(num_subs) + " ids found.")
 
-    def _get_work_update_date(self, li_tag):
-        for div in li_tag.findAll('div', attrs={'class': 'header'}):
-            for p in div.findAll('p', attrs={'class': 'datetime'}):
-                return datetime.strptime(p.text, AO3_DATE_FORMAT)
+            req = get_with_timeout(self.sess, api_url % page_no)
+            soup = BeautifulSoup(req.text, features='html.parser')
+
+            table_tag = soup.find('dl', attrs={'class': 'subscription'})
+
+            for dt in table_tag.find_all('dt'):
+                for link in dt.find_all('a'):
+                    # For some reason, dt.find('a') is giving a NavigableString instead
+                    # of a tag object, but dt.find_all('a') works. We only want the
+                    # first of the links here.
+                    yield link.get("href").replace("/" + sub_type + "/", "")
+                    break
+
+                num_subs += 1
+                sub_ids.append(id)
+
+                if max_count and num_subs >= max_count:
+                    max_subs_found = True
+                    sub_ids = sub_ids[0:max_count]
+                    break
+
+            if max_subs_found:
+                break
+
+            # The pagination button at the end of the page is of the form
+            #
+            #     <li class="next" title="next"> ... </li>
+            #
+            # If there's another page of results, this contains an <a> tag
+            # pointing to the next page.  Otherwise, it contains a <span>
+            # tag with the 'disabled' class.
+            try:
+                next_button = soup.find('li', attrs={'class': 'next'})
+                if next_button.find('span', attrs={'class': 'disabled'}):
+                    break
+            except:
+                # In case of absence of "next"
+                break
+
+        return sub_ids
+
 
