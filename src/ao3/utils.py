@@ -152,12 +152,22 @@ def get_ids_and_dates_from_page(soup, date_type):
     #       </li>
     #       ...
     #     </ul>
-
+    #
+    # Entries on a user's works page are stored in a list of the form:
+    #
+    #     <ol class ="work index group">
+    #       <li class="work blurb group" id="work_12345" role="article">
+    #         ...
+    #       </li>
+    #       ...
+    #     </ul>
     list_tag = soup.find('ol', attrs={'class': 'bookmark'})
     if not list_tag:
         list_tag = soup.find('ol', attrs={'class': 'reading'})
     if not list_tag:
         list_tag = soup.find('ul', attrs={'class': 'series'})
+    if not list_tag:
+        list_tag = soup.find('ol', attrs={'class': 'work'})
 
     for li_tag in list_tag.findAll('li', attrs={'class': 'blurb'}):
         try:
