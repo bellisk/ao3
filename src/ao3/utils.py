@@ -64,7 +64,7 @@ def get_list_of_work_ids(
     If expand_series=True, all works in a bookmarked series will be treated
     as individual bookmarks. Otherwise, series bookmarks will be ignored.
     """
-    query = urlparse(list_url)
+    query = urlparse(list_url).query
     if not query:
         list_url += '?page=%d'
     elif 'page' not in query:
