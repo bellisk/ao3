@@ -35,13 +35,35 @@ class User(object):
     def __repr__(self):
         return '%s(username=%r)' % (type(self).__name__, self.username)
 
+    def work_ids(self):
+        """
+        Returns a list of the user's works' ids.
+        We must be logged in to see locked works.
+        If sort_by_updated=True, works are sorted by date the work was last
+        updated, descending. Otherwise, sorting is by date the work was created,
+        descending.
+        """
+        url = 'https://archiveofourown.org/works?user_id=%s&page=%%d'
+        date_type = DATE_UPDATED
+
+        if sort_by_updated:
+            url += '&work_search[sort_column]=updated_at'
+
+        return self._get_list_of_work_ids(
+            url,
+            max_count,
+            expand_series,
+            oldest_date,
+            date_type
+        )
+
     def bookmarks_ids(self, max_count=None, expand_series=False, oldest_date=None, sort_by_updated=False):
         """
         Returns a list of the user's bookmarks' ids. Ignores external work bookmarks.
         User must be logged in to see private bookmarks.
         If expand_series=True, all works in a bookmarked series will be treated
         as individual bookmarks. Otherwise, series bookmarks will be ignored.
-        If sort_by_created=True, bookmarks are sorted by date the work was last
+        If sort_by_updated=True, bookmarks are sorted by date the work was last
         updated, descending. Otherwise, sorting is by date the bookmark was created,
         descending.
         """
@@ -73,12 +95,12 @@ class User(object):
             DATE_INTERACTED_WITH
         )
 
-    def user_subscriptions(self):
+    def user_subscription_ids(self):
         """
         Returns a list of the usernames that the user is subscribed to.
         """
 
-    def series_subscriptions(self):
+    def series_subscription_ids(self):
         """
         Returns a list of the series that the user is subscribed to.
         """
