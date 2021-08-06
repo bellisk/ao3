@@ -6,6 +6,7 @@ from .users import User
 from .works import Work
 from .comments import Comments
 
+
 class AO3(object):
     """A scraper for the Archive of Our Own (AO3)."""
 
@@ -28,7 +29,6 @@ class AO3(object):
     def __repr__(self):
         return '%s()' % (type(self).__name__)
 
-
     def work(self, id):
         """Look up a work that's been posted to AO3.
         :param id: the work ID.  In the URL to a work, this is the number.
@@ -36,7 +36,13 @@ class AO3(object):
         """
         return Work(id=id, sess=self.session)
 
-
     def comments(self, id):
         return Comments(id=id,sess=self.session)
 
+    def users_work_ids(self, username):
+        url = utils.user_url_from_id(username)
+        return utils.get_list_of_work_ids(url, self.session)
+
+    def series_work_ids(self, series_id):
+        url = utils.series_url_from_id(series_id)
+        return utils.get_list_of_work_ids(url, self.session)
