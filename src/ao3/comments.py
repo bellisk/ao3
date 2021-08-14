@@ -106,7 +106,7 @@ class Comments(object):
                 raise WorkNotFound('Unable to find a work with id %r' % self.id)
             elif req.status_code != 200:
                 raise RuntimeError('Unexpected error from AO3 API: %r (%r)' % (
-                    req.text, req.statuscode))
+                    req.text, req.status_code))
             if 'This work could have adult content' in req.text:
                 raise RestrictedWork('Work ID %s may have adult content') #force login to look at this, though theoretically the URL would just have to be modified to add view_adult=true. but i don't want to test this now :P
             if 'This work is only available to registered users' in req.text:
