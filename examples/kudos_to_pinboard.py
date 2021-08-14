@@ -23,17 +23,17 @@ To use this script:
 
 from datetime import datetime, timedelta
 
-from ao3 import AO3
-from ao3.works import RestrictedWork
 import requests
 
+from ao3 import AO3
+from ao3.works import RestrictedWork
 
 # AO3 login credentials
-AO3_USERNAME = '<USERNAME>'
-AO3_PASSWORD = '<PASSWORD>'
+AO3_USERNAME = "<USERNAME>"
+AO3_PASSWORD = "<PASSWORD>"
 
 # Pinboard API token.  https://pinboard.in/settings/password
-PINBOARD_API_TOKEN = '<API_TOKEN>'
+PINBOARD_API_TOKEN = "<API_TOKEN>"
 
 
 def main():
@@ -46,21 +46,27 @@ def main():
         try:
             work = api.work(id=work_id)
         except RestrictedWork:
-            print('Skipping %s as a restricted work' % work_id)
+            print("Skipping %s as a restricted work" % work_id)
             continue
         if api.user.username in work.kudos_left_by:
-            title = '%s - %s - %s [Archive of Our Own]' % (
-                work.title, work.author, work.fandoms[0])
-            print('Saving %s to Pinboard...' % work.url)
-            requests.get('https://api.pinboard.in/v1/posts/add', params={
-                'url': work.url,
-                'description': title,
-                'tags': 'ao3_kudos_sync',
-                'replace': 'no',
-                'auth_token': PINBOARD_API_TOKEN,
-                'format': 'json',
-            })
+            title = "%s - %s - %s [Archive of Our Own]" % (
+                work.title,
+                work.author,
+                work.fandoms[0],
+            )
+            print("Saving %s to Pinboard..." % work.url)
+            requests.get(
+                "https://api.pinboard.in/v1/posts/add",
+                params={
+                    "url": work.url,
+                    "description": title,
+                    "tags": "ao3_kudos_sync",
+                    "replace": "no",
+                    "auth_token": PINBOARD_API_TOKEN,
+                    "format": "json",
+                },
+            )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
