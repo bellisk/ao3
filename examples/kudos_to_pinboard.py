@@ -23,10 +23,10 @@ To use this script:
 
 from datetime import datetime, timedelta
 
-from ao3 import AO3
-from ao3.works import RestrictedWork
 import requests
 
+from ao3 import AO3
+from ao3.works import RestrictedWork
 
 # AO3 login credentials
 AO3_USERNAME = '<USERNAME>'

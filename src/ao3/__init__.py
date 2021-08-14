@@ -1,10 +1,11 @@
 # -*- encoding: utf-8
 
 import requests
+
 from . import utils
+from .comments import Comments
 from .users import User
 from .works import Work
-from .comments import Comments
 
 
 class AO3(object):
@@ -14,8 +15,8 @@ class AO3(object):
         self.user = None
         self.session = requests.Session()
 
-#bypasses AO3 login to avoid plaintext credential entry
-#user can input in their current AO3 session ID
+    # bypasses AO3 login to avoid plaintext credential entry
+    # user can input in their current AO3 session ID
 
     def login(self, username, cookie):
         """Log in to the archive.
@@ -23,11 +24,11 @@ class AO3(object):
         logged in. Does no checking if the cookie is valid.
         The cookie should be the value for _otwarchive_session
         """
-        self.user = User(username,cookie)
+        self.user = User(username, cookie)
         self.session = self.user.sess
 
     def __repr__(self):
-        return '%s()' % (type(self).__name__)
+        return "%s()" % (type(self).__name__)
 
     def work(self, id):
         """Look up a work that's been posted to AO3.
@@ -37,10 +38,10 @@ class AO3(object):
         return Work(id=id, sess=self.session)
 
     def comments(self, id):
-        return Comments(id=id,sess=self.session)
+        return Comments(id=id, sess=self.session)
 
     def users_work_ids(self, username, oldest_date=None):
-        url = utils.user_url_from_id(username) + '/works'
+        url = utils.user_url_from_id(username) + "/works"
         return utils.get_list_of_work_ids(
             url,
             self.session,
