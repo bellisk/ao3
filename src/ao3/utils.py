@@ -130,6 +130,8 @@ def get_list_of_work_ids(
             # In case of absence of "next"
             break
 
+    print(str(len(work_ids)) + " ids found.")
+
     return work_ids
 
 
