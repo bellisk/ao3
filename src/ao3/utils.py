@@ -19,6 +19,8 @@ WORK_URL_REGEX = re.compile(
     r"^https?://archiveofourown.org/works/" r"(?P<work_id>[0-9]+)"
 )
 
+LAST_VISITED_REGEX = re.compile("Last visited: ([0-9]{2} [a-zA-Z]{3} [0-9]{4})")
+
 TYPE_WORKS = "works"
 TYPE_SERIES = "series"
 TYPE_USERS = "users"
@@ -230,9 +232,8 @@ def get_user_interaction_date(li_tag):
         for p in div.findAll("p", attrs={"class": "datetime"}):
             return datetime.strptime(p.text, AO3_DATE_FORMAT)
 
-        last_visited = re.compile("Last visited: ([0-9]{2} [a-zA-Z]{3} [0-9]{4})")
         for h4 in div.findAll("h4", attrs={"class": "viewed"}):
-            date = last_visited.search(h4.text).group(1)
+            date = LAST_VISITED_REGEX.search(h4.text).group(1)
             return datetime.strptime(date, AO3_DATE_FORMAT)
 
     return None
