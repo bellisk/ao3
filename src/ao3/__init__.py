@@ -33,7 +33,7 @@ class AO3(object):
     def work(self, id):
         """Look up a work that's been posted to AO3.
         :param id: the work ID.  In the URL to a work, this is the number.
-            e.g. the work ID of http://archiveofourown.org/works/1234 is 1234.
+            e.g. the work ID of https://archiveofourown.org/works/1234 is 1234.
         """
         return Work(id=id, sess=self.session)
 

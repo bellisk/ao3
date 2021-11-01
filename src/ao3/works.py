@@ -20,7 +20,7 @@ class Work(object):
         self.id = id
 
         # Fetch the HTML for this work
-        if sess == None:
+        if sess is None:
             sess = requests.Session()
         req = sess.get("https://archiveofourown.org/works/%s" % self.id)
 
