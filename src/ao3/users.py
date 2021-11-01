@@ -28,7 +28,7 @@ class User(object):
     def __repr__(self):
         return "%s(username=%r)" % (type(self).__name__, self.username)
 
-    def work_ids(self):
+    def work_ids(self, max_count=None, oldest_date=None):
         """
         Returns a list of the user's works' ids.
         We must be logged in to see locked works.
@@ -43,6 +43,27 @@ class User(object):
             url,
             self.sess,
             date_type=date_type,
+            max_count=max_count,
+            oldest_date=oldest_date,
+        )
+
+    def gift_ids(self, max_count=None, oldest_date=None):
+        """
+        Returns a list of the ids of works gifted to the user.
+        We must be logged in to see locked works.
+        If sort_by_updated=True, works are sorted by date the work was last
+        updated, descending. Otherwise, sorting is by date the work was created,
+        descending.
+        """
+        url = "https://archiveofourown.org/users/%s/gifts?page=%%d" % self.username
+        date_type = DATE_UPDATED
+
+        return get_list_of_work_ids(
+            url,
+            self.sess,
+            date_type=date_type,
+            max_count=max_count,
+            oldest_date=oldest_date,
         )
 
     def bookmarks_ids(
