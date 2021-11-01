@@ -22,7 +22,7 @@ class RestrictedWork(Exception):
 class Comments(object):
     def __init__(self, id, sess=None):
         self.id = id
-        if sess == None:
+        if sess is None:
             sess = requests.Session()
         self.sess = sess
 
