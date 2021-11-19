@@ -57,3 +57,7 @@ class AO3(object):
             oldest_date=oldest_date,
             date_type=utils.DATE_UPDATED,
         )
+
+    def users_works_count(self, username):
+        """Returns the number of works by a user across all pseuds"""
+        return utils.get_user_works_count(username, self.session)
