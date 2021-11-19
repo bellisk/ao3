@@ -20,6 +20,7 @@ WORK_URL_REGEX = re.compile(
 )
 
 LAST_VISITED_REGEX = re.compile("Last visited: ([0-9]{2} [a-zA-Z]{3} [0-9]{4})")
+WORKS_HEADER_REGEX = re.compile(" ([0-9]*) Works?")
 
 TYPE_WORKS = "works"
 TYPE_SERIES = "series"
@@ -245,3 +246,15 @@ def get_work_update_date(li_tag):
     for div in li_tag.findAll("div", attrs={"class": "header"}):
         for p in div.findAll("p", attrs={"class": "datetime"}):
             return datetime.strptime(p.text, AO3_DATE_FORMAT)
+
+
+def get_user_works_count(username, session):
+    print(username)
+    url = user_url_from_id(username) + "/works"
+    req = get_with_timeout(session, url)
+    soup = BeautifulSoup(req.text, features="html.parser")
+    header_text = soup.h2.text
+    print(header_text)
+    m = re.search(WORKS_HEADER_REGEX, header_text)
+
+    return m.group(1)
