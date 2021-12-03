@@ -249,12 +249,28 @@ def get_work_update_date(li_tag):
 
 
 def get_user_works_count(username, session):
-    print(username)
     url = user_url_from_id(username) + "/works"
     req = get_with_timeout(session, url)
     soup = BeautifulSoup(req.text, features="html.parser")
     header_text = soup.h2.text
-    print(header_text)
     m = re.search(WORKS_HEADER_REGEX, header_text)
 
     return m.group(1)
+
+
+def get_series_info(series_id, session):
+    url = series_url_from_id(series_id)
+    req = get_with_timeout(session, url)
+    soup = BeautifulSoup(req.text, features="html.parser")
+
+    info = {"Title": soup.h2.text.strip()}
+
+    dl = soup.find("dl", attrs={"class": "meta"})
+    keys = [dt.text[:-1] for dt in dl.findAll("dt")]
+    values = [dd.text for dd in dl.findAll("dd")]
+
+    for i in range(len(keys)):
+        if keys[i] != "Stats":
+            info[keys[i]] = values[i]
+
+    return info
