@@ -61,3 +61,7 @@ class AO3(object):
     def users_works_count(self, username):
         """Returns the number of works by a user across all pseuds"""
         return utils.get_user_works_count(username, self.session)
+
+    def series_info(self, series_id):
+        """Returns information about a series"""
+        return utils.get_series_info(series_id, self.session)
