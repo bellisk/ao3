@@ -40,20 +40,22 @@ class AO3(object):
     def comments(self, id):
         return Comments(id=id, sess=self.session)
 
-    def users_work_ids(self, username, oldest_date=None):
+    def users_work_ids(self, username, max_count=0, oldest_date=None):
         url = utils.user_url_from_id(username) + "/works"
         return utils.get_list_of_work_ids(
             url,
             self.session,
+            max_count=max_count,
             oldest_date=oldest_date,
             date_type=utils.DATE_UPDATED,
         )
 
-    def series_work_ids(self, series_id, oldest_date=None):
+    def series_work_ids(self, series_id, max_count=0, oldest_date=None):
         url = utils.series_url_from_id(series_id)
         return utils.get_list_of_work_ids(
             url,
             self.session,
+            max_count=max_count,
             oldest_date=oldest_date,
             date_type=utils.DATE_UPDATED,
         )
