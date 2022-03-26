@@ -255,7 +255,7 @@ def get_user_works_count(username, session):
     header_text = soup.h2.text
     m = re.search(WORKS_HEADER_REGEX, header_text)
 
-    return m.group(1)
+    return int(m.group(1))
 
 
 def get_series_info(series_id, session):
