@@ -51,6 +51,10 @@ def user_url_from_id(user_id):
     return "https://archiveofourown.org/users/%s" % user_id
 
 
+def collection_url_from_id(collection_id):
+    return "https://archiveofourown.org/collections/%s" % collection_id
+
+
 def get_list_of_work_ids(
     list_url,
     session,
@@ -188,12 +192,19 @@ def get_ids_and_dates_from_page(soup, date_type):
             #     <a href="/users/authorname/pseuds/authorpseud" rel="author">Author Name</a>
             # </h4>
 
+            # or, for collection pages:
+
+            # <h4 class="heading">
+            #     <a href="/collections/xyz123/works/12345678">Work Title</a>
+            #     <a href="/users/authorname/pseuds/authorpseud" rel="author">Author Name</a>
+            # </h4>
+
             for h4_tag in li_tag.findAll("h4", attrs={"class": "heading"}):
                 for link in h4_tag.findAll("a"):
                     if ("works" in link.get("href")) and not (
                         "external_works" in link.get("href")
                     ):
-                        yield TYPE_WORKS, link.get("href").replace("/works/", ""), date
+                        yield TYPE_WORKS, link.get("href").split("/works/")[-1], date
                     elif "series" in link.get("href"):
                         yield TYPE_SERIES, link.get("href").replace(
                             "/series/", ""

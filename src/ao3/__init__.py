@@ -60,6 +60,16 @@ class AO3(object):
             date_type=utils.DATE_UPDATED,
         )
 
+    def collection_work_ids(self, collection_id, max_count=0, oldest_date=None):
+        url = utils.collection_url_from_id(collection_id) + "/works"
+        return utils.get_list_of_work_ids(
+            url,
+            self.session,
+            max_count=max_count,
+            oldest_date=oldest_date,
+            date_type=utils.DATE_UPDATED,
+        )
+
     def users_works_count(self, username):
         """Returns the number of works by a user across all pseuds"""
         return utils.get_user_works_count(username, self.session)
