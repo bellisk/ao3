@@ -247,8 +247,10 @@ def get_user_interaction_date(li_tag):
             return datetime.strptime(p.text, AO3_DATE_FORMAT)
 
         for h4 in div.findAll("h4", attrs={"class": "viewed"}):
-            date = LAST_VISITED_REGEX.search(h4.text).group(1)
-            return datetime.strptime(date, AO3_DATE_FORMAT)
+            m = LAST_VISITED_REGEX.search(h4.text)
+            if m:
+                date = m.group(1)
+                return datetime.strptime(date, AO3_DATE_FORMAT)
 
     return None
 
