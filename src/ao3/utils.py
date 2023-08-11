@@ -81,11 +81,7 @@ def get_list_of_work_ids(
 
     for page_no in itertools.count(start=1):
         print(
-            "Finding page: \t"
-            + str(page_no)
-            + " of list. \t"
-            + str(len(work_ids))
-            + " ids found."
+            "Finding page: \t %d of list. \t %d ids found." % (page_no, len(work_ids))
         )
 
         req = get_with_timeout(session, list_url % page_no)
