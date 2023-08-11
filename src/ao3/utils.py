@@ -222,7 +222,9 @@ def get_with_timeout(session, url):
     req = session.get(url)
 
     # if timeout, wait and try again
-    while len(req.text) < 20 and "Retry later" in req.text:
+    while (
+        len(req.text) < 20 and "Retry later" in req.text
+    ) or "You're clicking too fast!" in req.text:
         print("timeout... waiting 3 mins and trying again")
         time.sleep(180)
         req = session.get(url)
