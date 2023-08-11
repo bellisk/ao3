@@ -288,3 +288,43 @@ def get_series_info(series_id, session):
             info[keys[i]] = values[i]
 
     return info
+
+
+def check_for_removed_works(list_url, session, max_count=None, oldest_date=None):
+    """
+    Given a paginated list, checks for works that have been deleted, hidden,
+    or assigned to the orphan_account.
+    """
+    query = urlparse(list_url).query
+    if not query:
+        list_url += "?page=%d"
+    elif "page" not in query:
+        list_url += "&page=%d"
+
+    works = {
+        "deleted": 0,
+        "hidden": [],
+        "orphaned": [],
+    }
+    max_works_found = False
+
+    for page_no in itertools.count(start=1):
+        print("Finding page: \t %d of list." % (page_no))
+
+        req = get_with_timeout(session, list_url % page_no)
+        soup = BeautifulSoup(req.text, features="html.parser")
+
+        list_tag = soup.find("ol", attrs={"class": "index"})
+        if not list_tag:
+            list_tag = soup.find("ul", attrs={"class": "index"})
+
+        for li_tag in list_tag.findAll("li", attrs={"class": "blurb"}):
+            if "deleted" in li_tag.attrs["class"]:
+                works["deleted"] += 1
+                continue
+
+            for div in li_tag.findAll("div", attrs={"class": "mystery"}):
+                pass
+
+        if max_works_found:
+            break
