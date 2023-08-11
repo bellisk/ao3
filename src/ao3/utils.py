@@ -219,6 +219,9 @@ def get_ids_and_dates_from_page(soup, date_type):
 
 
 def get_with_timeout(session, url):
+    # AO3 got stricter with rate limits, so let's be careful
+    time.sleep(5)
+
     req = session.get(url)
 
     # if timeout, wait and try again
