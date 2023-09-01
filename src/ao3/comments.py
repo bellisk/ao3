@@ -1,14 +1,15 @@
 # -*- encoding: utf-8
 
 import itertools
-import json
 import time
-from datetime import datetime
 
 import requests
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 
-# Making this a separate class from Work bc the URL being fetched is different and we will need to iterate through pages of comments.
+from .utils import get_with_timeout
+
+# Making this a separate class from Work bc the URL being fetched is different and we
+# will need to iterate through pages of comments.
 
 
 class WorkNotFound(Exception):
@@ -70,12 +71,12 @@ class Comments(object):
         return work_id, user, anon, toplevel, date_time, timezone, chapter, content
 
     def recursemorecomments(self, url):
-        mc_req = self.sess.get(url)
+        mc_req = get_with_timeout(self.sess, url)
         # if timeout, wait and try again
         while len(mc_req.text) < 20 and "Retry later" in mc_req.text:
             print("timeout... waiting 3 mins and trying again")
             time.sleep(180)
-            mc_req = self.sess.get(url)
+            mc_req = get_with_timeout(self.sess, url)
 
         mc_soup = BeautifulSoup(mc_req.text, features="html.parser")
         for mc_li_tag in mc_soup.findAll("li", attrs={"class": "comment"}):
@@ -106,12 +107,12 @@ class Comments(object):
         )
 
         for page_no in itertools.count(start=1):
-            req = self.sess.get(api_url % page_no)
+            req = get_with_timeout(self.sess, api_url % page_no)
             # if timeout, wait and try again
             while len(req.text) < 20 and "Retry later" in req.text:
                 print("timeout... waiting 3 mins and trying again")
                 time.sleep(180)
-                req = self.sess.get(api_url % page_no)
+                req = get_with_timeout(self.sess, api_url % page_no)
 
             # make sure work can be found
             if req.status_code == 404:

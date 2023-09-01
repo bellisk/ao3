@@ -6,6 +6,8 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup, Tag
 
+from .utils import get_with_timeout
+
 
 class WorkNotFound(Exception):
     pass
@@ -22,7 +24,7 @@ class Work(object):
         # Fetch the HTML for this work
         if sess is None:
             sess = requests.Session()
-        req = sess.get("https://archiveofourown.org/works/%s" % self.id)
+        req = get_with_timeout(sess, "https://archiveofourown.org/works/%s" % self.id)
 
         if req.status_code == 404:
             raise WorkNotFound("Unable to find a work with id %r" % self.id)
@@ -34,8 +36,8 @@ class Work(object):
         # For some works, AO3 throws up an interstitial page asking you to
         # confirm that you really want to see the adult works.  Yes, we do.
         if "This work could have adult content" in req.text:
-            req = sess.get(
-                "https://archiveofourown.org/works/%s?view_adult=true" % self.id
+            req = get_with_timeout(
+                sess, "https://archiveofourown.org/works/%s?view_adult=true" % self.id
             )
 
         # Check for restricted works, which require you to be logged in

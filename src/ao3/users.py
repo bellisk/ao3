@@ -184,7 +184,7 @@ class User(object):
         )
 
         for page_no in itertools.count(start=1):
-            req = self.sess.get(api_url % page_no)
+            req = get_with_timeout(self.sess, api_url % page_no)
             print("On page: " + str(page_no))
             print("Cumulative deleted works encountered: " + str(self.deleted))
 
@@ -192,7 +192,7 @@ class User(object):
             while len(req.text) < 20 and "Retry later" in req.text:
                 print("timeout... waiting 3 mins and trying again")
                 time.sleep(180)
-                req = self.sess.get(api_url % page_no)
+                req = get_with_timeout(self.sess, api_url % page_no)
 
             soup = BeautifulSoup(req.text, features="html.parser")
             # The entries are stored in a list of the form:
