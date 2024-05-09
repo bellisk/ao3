@@ -46,15 +46,13 @@ def main():
         try:
             work = api.work(id=work_id)
         except RestrictedWork:
-            print("Skipping %s as a restricted work" % work_id)
+            print(f"Skipping {work_id} as a restricted work")
             continue
         if api.user.username in work.kudos_left_by:
-            title = "%s - %s - %s [Archive of Our Own]" % (
-                work.title,
-                work.author,
-                work.fandoms[0],
+            title = (
+                f"{work.title} - {work.author} - {work.fandoms[0]} [Archive of Our Own]"
             )
-            print("Saving %s to Pinboard..." % work.url)
+            print(f"Saving {work.url} to Pinboard...")
             requests.get(
                 "https://api.pinboard.in/v1/posts/add",
                 params={

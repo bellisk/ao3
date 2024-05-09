@@ -26,7 +26,7 @@ class User(object):
         self.deleted = 0
 
     def __repr__(self):
-        return "%s(username=%r)" % (type(self).__name__, self.username)
+        return f"{type(self).__name__}(username={self.username!r})"
 
     def work_ids(self, max_count=None, oldest_date=None):
         """
@@ -36,7 +36,7 @@ class User(object):
         updated, descending. Otherwise, sorting is by date the work was created,
         descending.
         """
-        url = "https://archiveofourown.org/works?user_id=%s" % self.username
+        url = f"https://archiveofourown.org/works?user_id={self.username}"
         date_type = DATE_UPDATED
 
         return get_list_of_work_ids(
@@ -103,9 +103,7 @@ class User(object):
         Returns a list of the user's marked-for-later ids.
         Does not currently handle expanding series.
         """
-        url = (
-            "https://archiveofourown.org/users/%s/readings?show=to-read" % self.username
-        )
+        url = f"https://archiveofourown.org/users/{self.username}/readings?show=to-read"
 
         return get_list_of_work_ids(
             url,
