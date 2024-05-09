@@ -24,20 +24,20 @@ class Work(object):
         # Fetch the HTML for this work
         if sess is None:
             sess = requests.Session()
-        req = get_with_timeout(sess, "https://archiveofourown.org/works/%s" % self.id)
+        req = get_with_timeout(sess, f"https://archiveofourown.org/works/{self.id}")
 
         if req.status_code == 404:
-            raise WorkNotFound("Unable to find a work with id %r" % self.id)
+            raise WorkNotFound(f"Unable to find a work with id {self.id!r}")
         elif req.status_code != 200:
             raise RuntimeError(
-                "Unexpected error from AO3 API: %r (%r)" % (req.text, req.status_code)
+                f"Unexpected error from AO3 API: {req.text!r} ({req.status_code!r})"
             )
 
         # For some works, AO3 throws up an interstitial page asking you to
         # confirm that you really want to see the adult works.  Yes, we do.
         if "This work could have adult content" in req.text:
             req = get_with_timeout(
-                sess, "https://archiveofourown.org/works/%s?view_adult=true" % self.id
+                sess, f"https://archiveofourown.org/works/{self.id}?view_adult=true"
             )
 
         # Check for restricted works, which require you to be logged in
@@ -53,7 +53,7 @@ class Work(object):
         self._soup = BeautifulSoup(self._html, "html.parser")
 
     def __repr__(self):
-        return "%s(id=%r)" % (type(self).__name__, self.id)
+        return f"{type(self).__name__}(id={self.id!r})"
 
     def __eq__(self, other):
         return self.id == other.id
@@ -67,7 +67,7 @@ class Work(object):
     @property
     def url(self):
         """A URL to this work."""
-        return "https://archiveofourown.org/works/%s" % self.id
+        return f"https://archiveofourown.org/works/{self.id}"
 
     @property
     def title(self):

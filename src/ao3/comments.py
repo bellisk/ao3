@@ -28,7 +28,7 @@ class Comments(object):
         self.sess = sess
 
     def __repr__(self):
-        return "%s(id=%r)" % (type(self).__name__, self.id)
+        return f"{type(self).__name__}(id={self.id!r})"
 
     def parsecomment(self, li_tag):  # inside class so the self info stays attached
         h4_tag = li_tag.find("h4", attrs={"class": "heading"})
@@ -116,11 +116,10 @@ class Comments(object):
 
             # make sure work can be found
             if req.status_code == 404:
-                raise WorkNotFound("Unable to find a work with id %r" % self.id)
+                raise WorkNotFound(f"Unable to find a work with id {self.id!r}")
             elif req.status_code != 200:
                 raise RuntimeError(
-                    "Unexpected error from AO3 API: %r (%r)"
-                    % (req.text, req.status_code)
+                    f"Unexpected error from AO3 API: {req.text!r} ({req.status_code!r})"
                 )
             if "This work could have adult content" in req.text:
                 raise RestrictedWork(

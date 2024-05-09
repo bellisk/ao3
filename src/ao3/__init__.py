@@ -28,7 +28,7 @@ class AO3(object):
         self.session = self.user.sess
 
     def __repr__(self):
-        return "%s()" % (type(self).__name__)
+        return f"{type(self).__name__}()"
 
     def work(self, id):
         """Look up a work that's been posted to AO3.

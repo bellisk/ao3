@@ -40,19 +40,19 @@ def work_id_from_url(url):
 
 
 def work_url_from_id(work_id):
-    return "https://archiveofourown.org/works/%s" % work_id
+    return f"https://archiveofourown.org/works/{work_id}"
 
 
 def series_url_from_id(series_id):
-    return "https://archiveofourown.org/series/%s" % series_id
+    return f"https://archiveofourown.org/series/{series_id}"
 
 
 def user_url_from_id(user_id):
-    return "https://archiveofourown.org/users/%s" % user_id
+    return f"https://archiveofourown.org/users/{user_id}"
 
 
 def collection_url_from_id(collection_id):
-    return "https://archiveofourown.org/collections/%s" % collection_id
+    return f"https://archiveofourown.org/collections/{collection_id}"
 
 
 def get_list_of_work_ids(
