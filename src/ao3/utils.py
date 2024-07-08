@@ -81,7 +81,7 @@ def get_list_of_work_ids(
 
     for page_no in itertools.count(start=1):
         print(
-            "Finding page: \t %d of list. \t %d ids found." % (page_no, len(work_ids))
+            "Loading page: \t %d of list. \t %d ids found up to now." % (page_no, len(work_ids))
         )
 
         req = get_with_timeout(session, list_url % page_no)
@@ -175,6 +175,8 @@ def get_ids_and_dates_from_page(soup, date_type):
     list_tag = soup.find("ol", attrs={"class": "index"})
     if not list_tag:
         list_tag = soup.find("ul", attrs={"class": "index"})
+    if not list_tag:
+        return []
 
     for li_tag in list_tag.findAll("li", attrs={"class": "blurb"}):
         try:
