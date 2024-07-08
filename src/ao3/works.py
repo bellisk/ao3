@@ -17,6 +17,10 @@ class RestrictedWork(Exception):
     pass
 
 
+class HiddenWork(Exception):
+    pass
+
+
 class Work(object):
     def __init__(self, id, sess=None):
         self.id = id
@@ -48,6 +52,9 @@ class Work(object):
         # TODO: Fix this.
         if "This work is only available to registered users" in req.text:
             raise RestrictedWork("Looking at work ID %s requires login")
+
+        if "This work is part of an ongoing challenge and will be revealed soon!" in req.text:
+            raise HiddenWork("Work ID %s is currently hidden")
 
         self._html = req.text
         self._soup = BeautifulSoup(self._html, "html.parser")
