@@ -352,11 +352,11 @@ class User(object):
         num_subs = 0
         for page_no in itertools.count(start=1):
             print(
-                "Finding page: \t"
+                "Loading page: \t"
                 + str(page_no)
                 + " of list. \t"
                 + str(num_subs)
-                + " ids found."
+                + " ids found up to now."
             )
 
             req = get_with_timeout(self.sess, api_url % page_no)
