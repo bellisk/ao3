@@ -53,7 +53,10 @@ class Work(object):
         if "This work is only available to registered users" in req.text:
             raise RestrictedWork("Looking at work ID %s requires login")
 
-        if "This work is part of an ongoing challenge and will be revealed soon!" in req.text:
+        if (
+            "This work is part of an ongoing challenge and will be revealed soon!"
+            in req.text
+        ):
             raise HiddenWork("Work ID %s is currently hidden")
 
         self._html = req.text
