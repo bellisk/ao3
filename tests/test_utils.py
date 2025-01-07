@@ -32,4 +32,4 @@ def test_work_id_from_bad_url_raises_runtimeerror(bad_url):
     """Trying to get a work ID from a non-work URL raises a RuntimeError."""
     with pytest.raises(RuntimeError) as exc:
         utils.work_id_from_url(bad_url)
-    assert "not a recognised AO3 work URL" in exc.value.message
+    assert "not a recognised AO3 work URL" in str(exc)
