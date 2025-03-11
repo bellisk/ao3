@@ -225,15 +225,23 @@ def get_with_timeout(session, url):
     # AO3 got stricter with rate limits, so let's be careful
     time.sleep(5)
 
-    req = session.get(url)
-
     # if timeout, wait and try again
-    while (
-        len(req.text) < 20 and "Retry later" in req.text
-    ) or "You're clicking too fast!" in req.text:
-        print("timeout... waiting 3 mins and trying again")
-        time.sleep(180)
+    while True:
         req = session.get(url)
+        print(url)
+        print(req.status_code)
+        if req.status_code == 200:
+            break
+        if req.status_code == 525:
+            print("Got Cloudflare error 525... waiting 10 seconds and trying again")
+            time.sleep(10)
+        elif len(req.text) < 20 and "Retry later" in req.text:
+            print("Timeout... waiting 3 mins and trying again")
+            time.sleep(180)
+        else:
+            raise RuntimeError(
+                f"Error getting url {url}: {req.status_code}, {req.reason}"
+            )
 
     return req
 
