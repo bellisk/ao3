@@ -228,8 +228,6 @@ def get_with_timeout(session, url):
     # if timeout, wait and try again
     while True:
         req = session.get(url)
-        print(url)
-        print(req.status_code)
         if req.status_code == 200:
             break
         if req.status_code == 525:
