@@ -225,6 +225,9 @@ def get_with_timeout(session, url):
         req = session.get(url)
         if req.status_code == 200:
             break
+        if req.status_code == 503:
+            print("Got error 503... waiting 10 seconds and trying again")
+            time.sleep(10)
         if req.status_code == 525:
             print("Got Cloudflare error 525... waiting 10 seconds and trying again")
             time.sleep(10)
