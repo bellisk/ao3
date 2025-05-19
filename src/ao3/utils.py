@@ -19,6 +19,11 @@ WORK_URL_REGEX = re.compile(
     r"^https?://archiveofourown.org/works/" r"(?P<work_id>[0-9]+)"
 )
 
+# URL of the AO3 site or mirror we should download works from.
+# Currently (2025-05-19), archiveofourown.org often returns Cloudflare 525 errors,
+# but archiveofourown.gay does not.
+BASE_URL = "https://archiveofourown.gay"
+
 LAST_VISITED_REGEX = re.compile("Last visited: ([0-9]{2} [a-zA-Z]{3} [0-9]{4})")
 WORKS_HEADER_REGEX = re.compile(" ([0-9]*) Works?")
 
@@ -40,19 +45,19 @@ def work_id_from_url(url):
 
 
 def work_url_from_id(work_id):
-    return f"https://archiveofourown.org/works/{work_id}"
+    return f"{BASE_URL}/works/{work_id}"
 
 
 def series_url_from_id(series_id):
-    return f"https://archiveofourown.org/series/{series_id}"
+    return f"{BASE_URL}/series/{series_id}"
 
 
 def user_url_from_id(user_id):
-    return f"https://archiveofourown.org/users/{user_id}"
+    return f"{BASE_URL}/users/{user_id}"
 
 
 def collection_url_from_id(collection_id):
-    return f"https://archiveofourown.org/collections/{collection_id}"
+    return f"{BASE_URL}/collections/{collection_id}"
 
 
 def get_list_of_work_ids(

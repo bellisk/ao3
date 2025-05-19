@@ -6,7 +6,7 @@ import time
 import cloudscraper
 from bs4 import BeautifulSoup
 
-from .utils import get_with_timeout
+from .utils import BASE_URL, get_with_timeout
 
 # Making this a separate class from Work bc the URL being fetched is different and we
 # will need to iterate through pages of comments.
@@ -87,7 +87,7 @@ class Comments(object):
                     mc_li_tag
                 ):  # potentially will break if nested further?? unsure what that looks like though
                     for x in self.recursemorecomments(
-                        "https://archiveofourown.org" + mc_li_tag.find("a").get("href")
+                        BASE_URL + mc_li_tag.find("a").get("href")
                     ):
                         yield x
                 else:
@@ -102,8 +102,7 @@ class Comments(object):
         """
 
         api_url = (
-            "https://archiveofourown.org/works/%s?page=%%d&show_comments=true&view_full_work=true"
-            % self.id
+            f"{BASE_URL}/works/{self.id}?page=%d&show_comments=true&view_full_work=true"
         )
 
         for page_no in itertools.count(start=1):
@@ -138,7 +137,7 @@ class Comments(object):
                         pass
                     elif "more comments in this thread" in str(li_tag):
                         for x in self.recursemorecomments(
-                            "https://archiveofourown.org" + li_tag.find("a").get("href")
+                            BASE_URL + li_tag.find("a").get("href")
                         ):
                             yield x
                     else:
