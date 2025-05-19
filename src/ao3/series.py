@@ -7,11 +7,11 @@ from .utils import DATE_UPDATED, get_list_of_work_ids, get_with_timeout
 class Series(object):
     """An AO3 series."""
 
-    def __init__(self, series_id, session, ao3_url):
-        self.series_id = series_id
+    def __init__(self, id, session, ao3_url):
+        self.id = id
         self.session = session
         self.ao3_url = ao3_url
-        self.url = f"{self.ao3_url}/series/{self.series_id}"
+        self.url = f"{self.ao3_url}/series/{self.id}"
 
     def work_ids(self, max_count=0, oldest_date=None):
         return get_list_of_work_ids(

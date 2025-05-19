@@ -70,7 +70,7 @@ class AO3(object):
         :param id: the series ID. In the url to a series, this is the number.
            e.g. the series ID of https://archiveofourown.org/series/1234 is 1234.
         """
-        return Series(series_id=id, session=self.session, ao3_url=self.ao3_url)
+        return Series(id=id, session=self.session, ao3_url=self.ao3_url)
 
     def collection(self, id):
         """Look up a collection of works posted to AO3.
