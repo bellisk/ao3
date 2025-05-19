@@ -7,33 +7,17 @@ from .works import Work
 
 
 class User(object):
-    def __init__(self, username, cookie, ao3_url=BASE_URL):
-        """Init user.
+    """
+    An AO3 author, not necessarily the user whose account we are logging in to.
 
-        :param username: User's username
-        :param cookie: The contents of the logged-in user's _otwarchive_session cookie.
-        :param ao3_url: The url of the AO3 mirror being used, if any, e.g.
-                        https://archiveofourown.gay (an official mirror run by the
-                        OTW).
-                        WARNING: passing the user's cookie into a non-official mirror is
-                        a security risk!
-                        This option is given as a workaround for Cloudflare issues that
-                        are currently occurring on https://archiveofourown.org.
-        """
+    For authors who are not our user, we can see their works and public bookmarks, but
+    no information on subscriptions or private bookmarks.
+    """
+
+    def __init__(self, username, session, ao3_url):
         self.username = username
+        self.session = session
         self.ao3_url = ao3_url
-
-        sess = cloudscraper.create_scraper(debug=True)
-
-        jar = requests.cookies.RequestsCookieJar()
-        ao3_domain = urlparse(self.ao3_url).netloc
-        # must be done separately bc the set func returns a cookie, not a jar
-        jar.set("_otwarchive_session", cookie, domain=ao3_domain)
-        # AO3 requires this cookie to be set
-        jar.set("user_credentials", "1", domain=ao3_domain)
-        sess.cookies = jar
-
-        self.sess = sess
 
         # just for curiosity, count how many times deleted or locked works appear
         self.deleted = 0
@@ -54,7 +38,7 @@ class User(object):
 
         return get_list_of_work_ids(
             url,
-            self.sess,
+            self.session,
             date_type=date_type,
             max_count=max_count,
             oldest_date=oldest_date,
@@ -73,7 +57,7 @@ class User(object):
 
         return get_list_of_work_ids(
             url,
-            self.sess,
+            self.session,
             date_type=date_type,
             max_count=max_count,
             oldest_date=oldest_date,
@@ -104,7 +88,7 @@ class User(object):
 
         return get_list_of_work_ids(
             url,
-            self.sess,
+            self.session,
             max_count,
             expand_series,
             oldest_date,
@@ -120,7 +104,7 @@ class User(object):
 
         return get_list_of_work_ids(
             url,
-            self.sess,
+            self.session,
             max_count=max_count,
             expand_series=False,
             oldest_date=oldest_date,
@@ -166,7 +150,7 @@ class User(object):
         bookmarks = []
 
         for bookmark_id in bookmark_ids:
-            work = Work(bookmark_id, self.sess, self.ao3_url)
+            work = Work(bookmark_id, self.session, self.ao3_url)
             bookmarks.append(work)
 
             bookmark_total = bookmark_total + 1
@@ -193,7 +177,7 @@ class User(object):
         api_url = f"{self.ao3_url}/users/{self.username}/readings?page=%d"
 
         for page_no in itertools.count(start=1):
-            req = get_with_timeout(self.sess, api_url % page_no)
+            req = get_with_timeout(self.session, api_url % page_no)
             print("On page: " + str(page_no))
             print("Cumulative deleted works encountered: " + str(self.deleted))
 
@@ -201,7 +185,7 @@ class User(object):
             while len(req.text) < 20 and "Retry later" in req.text:
                 print("timeout... waiting 3 mins and trying again")
                 time.sleep(180)
-                req = get_with_timeout(self.sess, api_url % page_no)
+                req = get_with_timeout(self.session, api_url % page_no)
 
             soup = BeautifulSoup(req.text, features="html.parser")
             # The entries are stored in a list of the form:
@@ -367,7 +351,7 @@ class User(object):
                 + " ids found up to now."
             )
 
-            req = get_with_timeout(self.sess, api_url % page_no)
+            req = get_with_timeout(self.session, api_url % page_no)
             soup = BeautifulSoup(req.text, features="html.parser")
 
             table_tag = soup.find("dl", attrs={"class": "subscription"})

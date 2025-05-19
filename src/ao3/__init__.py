@@ -1,5 +1,8 @@
 # -*- encoding: utf-8
+from urllib.parse import urlparse
+
 import cloudscraper
+import requests
 
 from . import utils
 from .comments import Comments
@@ -33,8 +36,18 @@ class AO3(object):
         This option is given as a workaround for Cloudflare issues that
         are currently occurring on https://archiveofourown.org.
         """
-        self.user = User(username, cookie, ao3_url)
-        self.session = self.user.sess
+        session = cloudscraper.create_scraper(debug=True)
+
+        jar = requests.cookies.RequestsCookieJar()
+        ao3_domain = urlparse(self.ao3_url).netloc
+        # must be done separately bc the set func returns a cookie, not a jar
+        jar.set("_otwarchive_session", cookie, domain=ao3_domain)
+        # AO3 requires this cookie to be set
+        jar.set("user_credentials", "1", domain=ao3_domain)
+        session.cookies = jar
+
+        self.session = session
+        self.user = User(username, session, ao3_url)
 
     def __repr__(self):
         return f"{type(self).__name__}()"
