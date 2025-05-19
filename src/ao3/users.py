@@ -158,6 +158,7 @@ class User(object):
                 if id_type == TYPE_WORKS:
                     work_ids.append(id)
                 elif expand_series is True and id_type == TYPE_SERIES:
+                    print(f"Getting all urls from series {id}....")
                     series = Series(id, session, self.ao3_url)
                     for i in series.work_ids():
                         work_ids.append(i)
