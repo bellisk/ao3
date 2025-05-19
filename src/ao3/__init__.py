@@ -1,6 +1,5 @@
 # -*- encoding: utf-8
-
-import requests
+import cloudscraper
 
 from . import utils
 from .comments import Comments
@@ -13,7 +12,7 @@ class AO3(object):
 
     def __init__(self):
         self.user = None
-        self.session = requests.Session()
+        self.session = cloudscraper.create_scraper()
 
     # bypasses AO3 login to avoid plaintext credential entry
     # user can input in their current AO3 session ID

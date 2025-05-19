@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup, Tag
 
 from .utils import get_with_timeout
@@ -27,7 +27,7 @@ class Work(object):
 
         # Fetch the HTML for this work
         if sess is None:
-            sess = requests.Session()
+            sess = cloudscraper.create_scraper()
         req = get_with_timeout(sess, f"https://archiveofourown.org/works/{self.id}")
 
         if req.status_code == 404:

@@ -3,7 +3,7 @@
 import itertools
 import time
 
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 
 from .utils import get_with_timeout
@@ -24,7 +24,7 @@ class Comments(object):
     def __init__(self, id, sess=None):
         self.id = id
         if sess is None:
-            sess = requests.Session()
+            sess = cloudscraper.create_scraper()
         self.sess = sess
 
     def __repr__(self):

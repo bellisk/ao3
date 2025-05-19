@@ -1,5 +1,5 @@
 # -*- encoding: utf-8
-
+import cloudscraper
 import requests
 
 from .utils import *
@@ -11,7 +11,7 @@ class User(object):
     # instead of passing plaintext passwords, pass the contents of the _otwarchive_session cookie!
     def __init__(self, username, cookie):
         self.username = username
-        sess = requests.Session()
+        sess = cloudscraper.create_scraper(debug=True)
 
         jar = requests.cookies.RequestsCookieJar()
         # must be done separately bc the set func returns a cookie, not a jar
