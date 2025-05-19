@@ -3,10 +3,10 @@
 import json
 from datetime import datetime
 
-import cloudscraper
+import requests
 from bs4 import BeautifulSoup, Tag
 
-from .utils import BASE_URL, get_with_timeout
+from .utils import get_with_timeout
 
 
 class WorkNotFound(Exception):
@@ -27,8 +27,8 @@ class Work(object):
 
         # Fetch the HTML for this work
         if sess is None:
-            sess = cloudscraper.create_scraper()
-        req = get_with_timeout(sess, f"{BASE_URL}/works/{self.id}")
+            sess = requests.Session()
+        req = get_with_timeout(sess, f"https://archiveofourown.org/works/{self.id}")
 
         if req.status_code == 404:
             raise WorkNotFound(f"Unable to find a work with id {self.id!r}")
@@ -40,7 +40,9 @@ class Work(object):
         # For some works, AO3 throws up an interstitial page asking you to
         # confirm that you really want to see the adult works.  Yes, we do.
         if "This work could have adult content" in req.text:
-            req = get_with_timeout(sess, f"{BASE_URL}/works/{self.id}?view_adult=true")
+            req = get_with_timeout(
+                sess, f"https://archiveofourown.org/works/{self.id}?view_adult=true"
+            )
 
         # Check for restricted works, which require you to be logged in
         # first.  See https://archiveofourown.org/admin_posts/138
@@ -75,7 +77,7 @@ class Work(object):
     @property
     def url(self):
         """A URL to this work."""
-        return f"{BASE_URL}/works/{self.id}"
+        return f"https://archiveofourown.org/works/{self.id}"
 
     @property
     def title(self):
