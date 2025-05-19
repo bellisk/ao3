@@ -6,6 +6,7 @@ import requests
 
 from . import utils
 from .comments import Comments
+from .series import Series
 from .users import User
 from .works import Work
 
@@ -36,7 +37,7 @@ class AO3(object):
         This option is given as a workaround for Cloudflare issues that
         are currently occurring on https://archiveofourown.org.
         """
-        session = cloudscraper.create_scraper(debug=True)
+        session = cloudscraper.create_scraper()
 
         jar = requests.cookies.RequestsCookieJar()
         ao3_domain = urlparse(self.ao3_url).netloc
@@ -62,18 +63,16 @@ class AO3(object):
     def comments(self, id):
         return Comments(id=id, sess=self.session, ao3_url=self.ao3_url)
 
+    def series(self, id):
+        """Look up a series of works posted to AO3.
+
+        :param id: the series ID. In the url to a series, this is the number.
+           e.g. the series ID of https://archiveofourown.org/series/1234 is 1234.
+        """
+        return Series(series_id=id, session=self.session, ao3_url=self.ao3_url)
+
     def users_work_ids(self, username, max_count=0, oldest_date=None):
         url = utils.user_url_from_id(username) + "/works"
-        return utils.get_list_of_work_ids(
-            url,
-            self.session,
-            max_count=max_count,
-            oldest_date=oldest_date,
-            date_type=utils.DATE_UPDATED,
-        )
-
-    def series_work_ids(self, series_id, max_count=0, oldest_date=None):
-        url = utils.series_url_from_id(series_id)
         return utils.get_list_of_work_ids(
             url,
             self.session,
@@ -95,7 +94,3 @@ class AO3(object):
     def users_works_count(self, username):
         """Returns the number of works by a user across all pseuds"""
         return utils.get_user_works_count(username, self.session)
-
-    def series_info(self, series_id):
-        """Returns information about a series"""
-        return utils.get_series_info(series_id, self.session)

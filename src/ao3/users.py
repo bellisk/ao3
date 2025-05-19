@@ -1,14 +1,11 @@
 # -*- encoding: utf-8
-import cloudscraper
-import requests
-
+from . import Series
 from .utils import *
 from .works import Work
 
 
 class User(object):
-    """
-    An AO3 author, not necessarily the user whose account we are logging in to.
+    """An AO3 author, not necessarily the user whose account we are logging in to.
 
     For authors who are not our user, we can see their works and public bookmarks, but
     no information on subscriptions or private bookmarks.
@@ -80,25 +77,111 @@ class User(object):
         descending.
         """
         url = f"{self.ao3_url}/users/{self.username}/bookmarks?page=%d"
+        print(url)
         date_type = DATE_INTERACTED_WITH
 
         if sort_by_updated:
             url += "&bookmark_search[sort_column]=bookmarkable_date"
             date_type = DATE_UPDATED
 
-        return get_list_of_work_ids(
+        return self.get_list_of_work_ids(
             url,
             self.session,
             max_count,
             expand_series,
             oldest_date,
             date_type,
+            self.ao3_url,
         )
+
+    def get_list_of_work_ids(
+        self,
+        list_url,
+        session,
+        max_count=None,
+        expand_series=False,
+        oldest_date=None,
+        date_type="",
+        ao3_url=BASE_URL,
+    ):
+        """
+        TODO: this was just copied over from utils.py, and I removed the expand-series
+        TODO: loop from there. Clean up!
+
+        Returns a list of work ids from a paginated list.
+        Ignores external work bookmarks.
+        User must be logged in to see private bookmarks.
+        If expand_series=True, all works in a bookmarked series will be treated
+        as individual bookmarks. Otherwise, series bookmarks will be ignored.
+        """
+        query = urlparse(list_url).query
+        if not query:
+            list_url += "?page=%d"
+        elif "page" not in query:
+            list_url += "&page=%d"
+
+        work_ids = []
+        max_works_found = False
+
+        for page_no in itertools.count(start=1):
+            print(
+                "Loading page: \t %d of list. \t %d ids found up to now."
+                % (page_no, len(work_ids))
+            )
+
+            req = get_with_timeout(session, list_url % page_no)
+            soup = BeautifulSoup(req.text, features="html.parser")
+
+            for id_type, id, date in get_ids_and_dates_from_page(soup, date_type):
+                if oldest_date and date and date < oldest_date:
+                    print(
+                        id_type
+                        + "/"
+                        + id
+                        + " has date "
+                        + datetime.strftime(date, AO3_DATE_FORMAT)
+                        + ". Stopping here."
+                    )
+                    max_works_found = True
+                    break
+
+                if id_type == TYPE_WORKS:
+                    work_ids.append(id)
+                elif expand_series is True and id_type == TYPE_SERIES:
+                    series = Series(id, session, self.ao3_url)
+                    for i in series.work_ids():
+                        work_ids.append(i)
+
+                if max_count and len(work_ids) >= max_count:
+                    max_works_found = True
+                    work_ids = work_ids[0:max_count]
+                    break
+
+            if max_works_found:
+                break
+
+            # The pagination button at the end of the page is of the form
+            #
+            #     <li class="next" title="next"> ... </li>
+            #
+            # If there's another page of results, this contains an <a> tag
+            # pointing to the next page.  Otherwise, it contains a <span>
+            # tag with the 'disabled' class.
+            try:
+                next_button = soup.find("li", attrs={"class": "next"})
+                if next_button.find("span", attrs={"class": "disabled"}):
+                    break
+            except:
+                # In case of absence of "next"
+                break
+
+        print(str(len(work_ids)) + " ids found.")
+
+        return work_ids
 
     def marked_for_later_ids(self, max_count=None, oldest_date=None):
         """
         Returns a list of the user's marked-for-later ids.
-        Does not currently handle expanding series.
         """
         url = f"{self.ao3_url}/users/{self.username}/readings?show=to-read"
 
@@ -106,7 +189,6 @@ class User(object):
             url,
             self.session,
             max_count=max_count,
-            expand_series=False,
             oldest_date=oldest_date,
             date_type=DATE_INTERACTED_WITH,
         )
