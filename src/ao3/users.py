@@ -15,12 +15,25 @@ class User(object):
         self.username = username
         self.session = session
         self.ao3_url = ao3_url
+        self.url = f"{self.ao3_url}/users/{self.username}"
 
         # just for curiosity, count how many times deleted or locked works appear
         self.deleted = 0
 
     def __repr__(self):
         return f"{type(self).__name__}(username={self.username!r})"
+
+    def works_count(self):
+        url = f"{self.url}/works"
+        req = get_with_timeout(self.session, url)
+        soup = BeautifulSoup(req.text, features="html.parser")
+        header_text = soup.h2.text
+        m = re.search(WORKS_HEADER_REGEX, header_text)
+
+        if m:
+            return int(m.group(1))
+
+        return 0
 
     def work_ids(self, max_count=None, oldest_date=None):
         """
@@ -30,7 +43,7 @@ class User(object):
         updated, descending. Otherwise, sorting is by date the work was created,
         descending.
         """
-        url = f"{self.ao3_url}/works?user_id={self.username}"
+        url = f"{self.url}/works"
         date_type = DATE_UPDATED
 
         return get_list_of_work_ids(

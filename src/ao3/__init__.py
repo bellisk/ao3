@@ -71,15 +71,14 @@ class AO3(object):
         """
         return Series(series_id=id, session=self.session, ao3_url=self.ao3_url)
 
-    def users_work_ids(self, username, max_count=0, oldest_date=None):
-        url = utils.user_url_from_id(username) + "/works"
-        return utils.get_list_of_work_ids(
-            url,
-            self.session,
-            max_count=max_count,
-            oldest_date=oldest_date,
-            date_type=utils.DATE_UPDATED,
-        )
+    def author(self, username):
+        """Look up an AO3 author by username. This method is called 'author' to avoid
+        confusion with the logged-in user (self.user).
+
+        :param username: the author's username, e.g. example_user in the url
+            https://archiveofourown.org/users/example_user.
+        """
+        return User(username=username, session=self.session, ao3_url=self.ao3_url)
 
     def collection_work_ids(self, collection_id, max_count=0, oldest_date=None):
         url = utils.collection_url_from_id(collection_id) + "/works"
@@ -90,7 +89,3 @@ class AO3(object):
             oldest_date=oldest_date,
             date_type=utils.DATE_UPDATED,
         )
-
-    def users_works_count(self, username):
-        """Returns the number of works by a user across all pseuds"""
-        return utils.get_user_works_count(username, self.session)

@@ -45,14 +45,6 @@ def work_url_from_id(work_id):
     return f"{BASE_URL}/works/{work_id}"
 
 
-def series_url_from_id(series_id):
-    return f"{BASE_URL}/series/{series_id}"
-
-
-def user_url_from_id(user_id):
-    return f"{BASE_URL}/users/{user_id}"
-
-
 def collection_url_from_id(collection_id):
     return f"{BASE_URL}/collections/{collection_id}"
 
@@ -267,16 +259,3 @@ def get_work_update_date(li_tag):
     for div in li_tag.findAll("div", attrs={"class": "header"}):
         for p in div.findAll("p", attrs={"class": "datetime"}):
             return datetime.strptime(p.text, AO3_DATE_FORMAT)
-
-
-def get_user_works_count(username, session):
-    url = user_url_from_id(username) + "/works"
-    req = get_with_timeout(session, url)
-    soup = BeautifulSoup(req.text, features="html.parser")
-    header_text = soup.h2.text
-    m = re.search(WORKS_HEADER_REGEX, header_text)
-
-    if m:
-        return int(m.group(1))
-
-    return 0
