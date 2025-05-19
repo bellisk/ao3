@@ -1,11 +1,11 @@
 ao3.py
 ======
 
-This is my fork of alexwlchan's ao3 package, which is not actively maintained. Contributors to this 
+This is my fork of alexwlchan's ao3 package, which is not actively maintained. Contributors to this
 include etothepii and superborb. I actively maintain this fork and welcome contributions.
 
 A departure from the original package is that this one uses your username and cookie,
-rather than plaintext password entry. 
+rather than plaintext password entry.
 
 - verity (ladyofthelog)
 
@@ -40,9 +40,9 @@ Create an API instance:
 
 .. code-block:: pycon
 
-   >>> from ao3 import AO3, 
+   >>> from ao3 import AO3,
    >>> api = AO3()
-   
+
 Logging into your account
 --------------------------
 
@@ -51,15 +51,15 @@ Enter the contents of your _otwarchive_session cookie and username
 .. code-block:: pycon
 
    >>> api.login('USERNAME',"COOKIE CONTENTS")
-    
-If you have Viewing History enabled, you can get a list of works from 
+
+If you have Viewing History enabled, you can get a list of works from
 that history.
 
 .. code-block:: pycon
 
    >>> rh=api.user.reading_history()
    >>> next(rh)
-   
+
 This returns a tuple with information about the next work in your history
 
 
@@ -163,10 +163,10 @@ for easy export/passing into other places:
 Looking up your bookmarks
 -------------------------
 
-If you login as a user you can look up the bookmarks for that user. You can 
+If you login as a user you can look up the bookmarks for that user. You can
 get the bookmarks as a list of AO3 id numbers or as a list of work objects.
 
-Warning: This is very slow as as the api has to go back and retrieve every 
+Warning: This is very slow as as the api has to go back and retrieve every
 page.
 
 Get the bookmarks as works:

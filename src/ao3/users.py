@@ -1,5 +1,5 @@
 # -*- encoding: utf-8
-
+import cloudscraper
 import requests
 
 from .utils import *
@@ -11,7 +11,7 @@ class User(object):
     # instead of passing plaintext passwords, pass the contents of the _otwarchive_session cookie!
     def __init__(self, username, cookie):
         self.username = username
-        sess = requests.Session()
+        sess = cloudscraper.create_scraper(debug=True)
 
         jar = requests.cookies.RequestsCookieJar()
         # must be done separately bc the set func returns a cookie, not a jar
@@ -36,7 +36,7 @@ class User(object):
         updated, descending. Otherwise, sorting is by date the work was created,
         descending.
         """
-        url = f"https://archiveofourown.org/works?user_id={self.username}"
+        url = f"{BASE_URL}/works?user_id={self.username}"
         date_type = DATE_UPDATED
 
         return get_list_of_work_ids(
@@ -55,7 +55,7 @@ class User(object):
         updated, descending. Otherwise, sorting is by date the work was created,
         descending.
         """
-        url = "https://archiveofourown.org/users/%s/gifts?page=%%d" % self.username
+        url = f"{BASE_URL}/users/{self.username}/gifts?page=%d"
         date_type = DATE_UPDATED
 
         return get_list_of_work_ids(
@@ -82,7 +82,7 @@ class User(object):
         updated, descending. Otherwise, sorting is by date the bookmark was created,
         descending.
         """
-        url = "https://archiveofourown.org/users/%s/bookmarks?page=%%d" % self.username
+        url = f"{BASE_URL}/users/{self.username}/bookmarks?page=%d"
         date_type = DATE_INTERACTED_WITH
 
         if sort_by_updated:
@@ -103,7 +103,7 @@ class User(object):
         Returns a list of the user's marked-for-later ids.
         Does not currently handle expanding series.
         """
-        url = f"https://archiveofourown.org/users/{self.username}/readings?show=to-read"
+        url = f"{BASE_URL}/users/{self.username}/readings?show=to-read"
 
         return get_list_of_work_ids(
             url,
@@ -177,9 +177,7 @@ class User(object):
         # TODO: probably this should be returned as a structured object instead of this giant tuple
 
         # URL for the user's reading history page
-        api_url = (
-            "https://archiveofourown.org/users/%s/readings?page=%%d" % self.username
-        )
+        api_url = f"{BASE_URL}/users/{self.username}/readings?page=%d"
 
         for page_no in itertools.count(start=1):
             req = get_with_timeout(self.sess, api_url % page_no)
@@ -342,8 +340,7 @@ class User(object):
         work, series or username.
         """
         api_url = (
-            "https://archiveofourown.org/users/%s/subscriptions?type=%s&page=%%d"
-            % (self.username, sub_type)
+            f"{BASE_URL}/users/{self.username}/subscriptions?type={sub_type}&page=%d"
         )
 
         sub_ids = []
