@@ -15,16 +15,16 @@ from .works import Work
 class AO3(object):
     """A scraper for the Archive of Our Own (AO3)."""
 
-    def __init__(self):
+    def __init__(self, ao3_url=utils.BASE_URL):
         self.user = None
         self.session = cloudscraper.create_scraper()
-        self.ao3_url = utils.BASE_URL
+        self.ao3_url = ao3_url
 
         #
     # bypasses AO3 login to avoid plaintext credential entry
     # user can input in their current AO3 session ID
 
-    def login(self, username, cookie, ao3_url=utils.BASE_URL):
+    def login(self, username, cookie):
         """Log in to the archive.
         This allows you to access pages that are only available while
         logged in. Does no checking if the cookie is valid.
@@ -49,7 +49,7 @@ class AO3(object):
         session.cookies = jar
 
         self.session = session
-        self.user = User(username, session, ao3_url)
+        self.user = User(username, session, self.ao3_url)
 
     def __repr__(self):
         return f"{type(self).__name__}()"
