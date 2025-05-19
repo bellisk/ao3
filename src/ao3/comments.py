@@ -3,10 +3,10 @@
 import itertools
 import time
 
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 
-from .utils import get_with_timeout
+from .utils import BASE_URL, get_with_timeout
 
 # Making this a separate class from Work bc the URL being fetched is different and we
 # will need to iterate through pages of comments.
@@ -21,11 +21,12 @@ class RestrictedWork(Exception):
 
 
 class Comments(object):
-    def __init__(self, id, sess=None):
+    def __init__(self, id, sess=None, ao3_url=BASE_URL):
         self.id = id
         if sess is None:
-            sess = requests.Session()
+            sess = cloudscraper.create_scraper()
         self.sess = sess
+        self.ao3_url = ao3_url
 
     def __repr__(self):
         return f"{type(self).__name__}(id={self.id!r})"
@@ -87,7 +88,7 @@ class Comments(object):
                     mc_li_tag
                 ):  # potentially will break if nested further?? unsure what that looks like though
                     for x in self.recursemorecomments(
-                        "https://archiveofourown.org" + mc_li_tag.find("a").get("href")
+                        BASE_URL + mc_li_tag.find("a").get("href")
                     ):
                         yield x
                 else:
@@ -101,10 +102,7 @@ class Comments(object):
 
         """
 
-        api_url = (
-            "https://archiveofourown.org/works/%s?page=%%d&show_comments=true&view_full_work=true"
-            % self.id
-        )
+        api_url = f"{self.ao3_url}/works/{self.id}?page=%d&show_comments=true&view_full_work=true"
 
         for page_no in itertools.count(start=1):
             req = get_with_timeout(self.sess, api_url % page_no)
@@ -138,7 +136,7 @@ class Comments(object):
                         pass
                     elif "more comments in this thread" in str(li_tag):
                         for x in self.recursemorecomments(
-                            "https://archiveofourown.org" + li_tag.find("a").get("href")
+                            BASE_URL + li_tag.find("a").get("href")
                         ):
                             yield x
                     else:
