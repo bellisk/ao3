@@ -45,10 +45,6 @@ def work_url_from_id(work_id):
     return f"{BASE_URL}/works/{work_id}"
 
 
-def collection_url_from_id(collection_id):
-    return f"{BASE_URL}/collections/{collection_id}"
-
-
 def get_list_of_work_ids(
     list_url,
     session,
