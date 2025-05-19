@@ -90,7 +90,6 @@ class User(object):
         descending.
         """
         url = f"{self.ao3_url}/users/{self.username}/bookmarks?page=%d"
-        print(url)
         date_type = DATE_INTERACTED_WITH
 
         if sort_by_updated:
@@ -104,7 +103,6 @@ class User(object):
             expand_series,
             oldest_date,
             date_type,
-            self.ao3_url,
         )
 
     def get_list_of_work_ids(
@@ -115,7 +113,6 @@ class User(object):
         expand_series=False,
         oldest_date=None,
         date_type="",
-        ao3_url=BASE_URL,
     ):
         """
         TODO: this was just copied over from utils.py, and I removed the expand-series
