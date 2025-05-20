@@ -20,15 +20,13 @@ class AO3(object):
         self.session = cloudscraper.create_scraper()
         self.ao3_url = ao3_url
 
-        #
-    # bypasses AO3 login to avoid plaintext credential entry
-    # user can input in their current AO3 session ID
-
     def login(self, username, cookie):
         """Log in to the archive.
         This allows you to access pages that are only available while
         logged in. Does no checking if the cookie is valid.
-        The cookie should be the value for _otwarchive_session.
+        The cookie should be the value for _otwarchive_session, which can be got from
+        the browser when you are logged in there.
+        This avoids passing the user's login credentials in plaintext.
 
         The url of an AO3 mirror can be passed in, e.g. https://archiveofourown.gay (an
         official mirror run by the OTW).

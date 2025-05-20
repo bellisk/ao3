@@ -96,7 +96,7 @@ class User(object):
             url += "&bookmark_search[sort_column]=bookmarkable_date"
             date_type = DATE_UPDATED
 
-        return self.get_list_of_work_ids(
+        return self._get_list_of_work_ids_from_bookmarks_page(
             url,
             self.session,
             max_count,
@@ -105,7 +105,7 @@ class User(object):
             date_type,
         )
 
-    def get_list_of_work_ids(
+    def _get_list_of_work_ids_from_bookmarks_page(
         self,
         list_url,
         session,
@@ -114,15 +114,14 @@ class User(object):
         oldest_date=None,
         date_type="",
     ):
-        """
-        TODO: this was just copied over from utils.py, and I removed the expand-series
-        TODO: loop from there. Clean up!
+        """A modified version of utils.get_list_of_work_ids that can handle getting
+        links to works and series in the same list.
+        If expand_series=True, all works in a bookmarked series will be treated
+        as individual bookmarks. Otherwise, series bookmarks will be ignored.
 
         Returns a list of work ids from a paginated list.
         Ignores external work bookmarks.
         User must be logged in to see private bookmarks.
-        If expand_series=True, all works in a bookmarked series will be treated
-        as individual bookmarks. Otherwise, series bookmarks will be ignored.
         """
         query = urlparse(list_url).query
         if not query:
