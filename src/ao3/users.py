@@ -11,7 +11,7 @@ class User(object):
     no information on subscriptions or private bookmarks.
     """
 
-    def __init__(self, username, session, ao3_url):
+    def __init__(self, username, session, ao3_url=BASE_URL):
         self.username = username
         self.session = session
         self.ao3_url = ao3_url
