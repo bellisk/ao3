@@ -19,6 +19,8 @@ WORK_URL_REGEX = re.compile(
     r"^https?://archiveofourown.org/works/" r"(?P<work_id>[0-9]+)"
 )
 
+BASE_URL = "https://archiveofourown.org"
+
 LAST_VISITED_REGEX = re.compile("Last visited: ([0-9]{2} [a-zA-Z]{3} [0-9]{4})")
 WORKS_HEADER_REGEX = re.compile(" ([0-9]*) Works?")
 
@@ -40,35 +42,21 @@ def work_id_from_url(url):
 
 
 def work_url_from_id(work_id):
-    return f"https://archiveofourown.org/works/{work_id}"
-
-
-def series_url_from_id(series_id):
-    return f"https://archiveofourown.org/series/{series_id}"
-
-
-def user_url_from_id(user_id):
-    return f"https://archiveofourown.org/users/{user_id}"
-
-
-def collection_url_from_id(collection_id):
-    return f"https://archiveofourown.org/collections/{collection_id}"
+    return f"{BASE_URL}/works/{work_id}"
 
 
 def get_list_of_work_ids(
     list_url,
     session,
     max_count=None,
-    expand_series=False,
     oldest_date=None,
     date_type="",
 ):
     """
-    Returns a list of work ids from a paginated list.
+    Returns a list of work ids from a paginated list (bookmarks, collection, series,
+    etc).
     Ignores external work bookmarks.
     User must be logged in to see private bookmarks.
-    If expand_series=True, all works in a bookmarked series will be treated
-    as individual bookmarks. Otherwise, series bookmarks will be ignored.
     """
     query = urlparse(list_url).query
     if not query:
@@ -103,11 +91,6 @@ def get_list_of_work_ids(
 
             if id_type == TYPE_WORKS:
                 work_ids.append(id)
-            elif expand_series is True and id_type == TYPE_SERIES:
-                series_req = get_with_timeout(session, series_url_from_id(id))
-                series_soup = BeautifulSoup(series_req.text, features="html.parser")
-                for t, i, d in get_ids_and_dates_from_page(series_soup, date_type):
-                    work_ids.append(i)
 
             if max_count and len(work_ids) >= max_count:
                 max_works_found = True
@@ -230,7 +213,10 @@ def get_with_timeout(session, url):
         req = session.get(url)
         if req.status_code == 200:
             break
-        if req.status_code == 525:
+        elif req.status_code == 503:
+            print("Got error 503... waiting 10 seconds and trying again")
+            time.sleep(10)
+        elif req.status_code == 525:
             print("Got Cloudflare error 525... waiting 10 seconds and trying again")
             time.sleep(10)
         elif len(req.text) < 20 and "Retry later" in req.text:
@@ -269,34 +255,3 @@ def get_work_update_date(li_tag):
     for div in li_tag.findAll("div", attrs={"class": "header"}):
         for p in div.findAll("p", attrs={"class": "datetime"}):
             return datetime.strptime(p.text, AO3_DATE_FORMAT)
-
-
-def get_user_works_count(username, session):
-    url = user_url_from_id(username) + "/works"
-    req = get_with_timeout(session, url)
-    soup = BeautifulSoup(req.text, features="html.parser")
-    header_text = soup.h2.text
-    m = re.search(WORKS_HEADER_REGEX, header_text)
-
-    if m:
-        return int(m.group(1))
-
-    return 0
-
-
-def get_series_info(series_id, session):
-    url = series_url_from_id(series_id)
-    req = get_with_timeout(session, url)
-    soup = BeautifulSoup(req.text, features="html.parser")
-
-    info = {"Title": soup.h2.text.strip()}
-
-    dl = soup.find("dl", attrs={"class": "meta"})
-    keys = [dt.text[:-1] for dt in dl.findAll("dt")]
-    values = [dd.text for dd in dl.findAll("dd")]
-
-    for i in range(len(keys)):
-        if keys[i] != "Stats":
-            info[keys[i]] = values[i]
-
-    return info
