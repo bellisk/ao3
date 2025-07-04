@@ -52,13 +52,13 @@ class Work(object):
         # care to implement right now.
         # TODO: Fix this.
         if "This work is only available to registered users" in req.text:
-            raise RestrictedWork("Looking at work ID %s requires login")
+            raise RestrictedWork(f"Looking at work ID {self.id} requires login")
 
         if (
             "This work is part of an ongoing challenge and will be revealed soon!"
             in req.text
         ):
-            raise HiddenWork("Work ID %s is currently hidden")
+            raise HiddenWork(f"Work ID {self.id} is currently hidden")
 
         self._html = req.text
         self._soup = BeautifulSoup(self._html, "html.parser")
