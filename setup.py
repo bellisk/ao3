@@ -42,6 +42,7 @@ setup(
     package_dir={"": SOURCE},
     install_requires=[
         "beautifulsoup4>=4.5.3, <5",
+        "cloudscraper @ git+https://github.com/VeNoMouS/cloudscraper.git@3.0.0",
         "requests>=2.12.4, <3",
     ],
 )
