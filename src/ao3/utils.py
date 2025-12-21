@@ -111,7 +111,7 @@ def get_list_of_work_ids(
             next_button = soup.find("li", attrs={"class": "next"})
             if next_button.find("span", attrs={"class": "disabled"}):
                 break
-        except:
+        except AttributeError:
             # In case of absence of "next"
             break
 
