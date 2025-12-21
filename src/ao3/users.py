@@ -1,6 +1,26 @@
 # -*- encoding: utf-8
+import itertools
+import re
+import time
+from datetime import datetime
+from urllib.parse import urlparse
+
+from bs4 import BeautifulSoup
+
 from . import Series
-from .utils import *
+from .utils import (
+    AO3_DATE_FORMAT,
+    BASE_URL,
+    DATE_INTERACTED_WITH,
+    DATE_UPDATED,
+    TYPE_SERIES,
+    TYPE_USERS,
+    TYPE_WORKS,
+    WORKS_HEADER_REGEX,
+    get_ids_and_dates_from_page,
+    get_list_of_work_ids,
+    get_with_timeout,
+)
 from .works import Work
 
 
@@ -181,7 +201,7 @@ class User(object):
                 next_button = soup.find("li", attrs={"class": "next"})
                 if next_button.find("span", attrs={"class": "disabled"}):
                     break
-            except:
+            except AttributeError:
                 # In case of absence of "next"
                 break
 
@@ -394,7 +414,7 @@ class User(object):
                     pubdate = datetime.strptime(pubdate_str, "%d %b %Y").date()
                     yield work_id, date, numvisits, title, author, fandom, warnings, relationships, characters, freeforms, words, chapters, comments, kudos, bookmarks, hits, pubdate
 
-                except (KeyError, AttributeError) as e:
+                except (KeyError, AttributeError):
                     # A deleted work shows up as
                     #
                     #      <li class="deleted reading work blurb group">
@@ -478,7 +498,7 @@ class User(object):
                 next_button = soup.find("li", attrs={"class": "next"})
                 if next_button.find("span", attrs={"class": "disabled"}):
                     break
-            except:
+            except AttributeError:
                 # In case of absence of "next"
                 break
 
