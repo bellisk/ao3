@@ -1,6 +1,26 @@
 # -*- encoding: utf-8
+import itertools
+import re
+import time
+from datetime import datetime
+from urllib.parse import urlparse
+
+from bs4 import BeautifulSoup
+
 from . import Series
-from .utils import *
+from .utils import (
+    AO3_DATE_FORMAT,
+    BASE_URL,
+    DATE_INTERACTED_WITH,
+    DATE_UPDATED,
+    TYPE_SERIES,
+    TYPE_USERS,
+    TYPE_WORKS,
+    WORKS_HEADER_REGEX,
+    get_ids_and_dates_from_page,
+    get_list_of_work_ids,
+    get_with_timeout,
+)
 from .works import Work
 
 
