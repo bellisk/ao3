@@ -3,6 +3,7 @@ import time
 from urllib.parse import urlparse
 
 import requests
+from requests import Response
 
 DEFAULT_AO3_URL = "https://archiveofourown.org"
 DEFAULT_FLARESOLVERR_PROXY_URL = "http://localhost:8191/v1"

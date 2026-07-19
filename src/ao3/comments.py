@@ -1,4 +1,3 @@
-
 import itertools
 
 from bs4 import BeautifulSoup
