@@ -3,7 +3,6 @@
 import itertools
 import time
 
-import requests
 from bs4 import BeautifulSoup
 
 from .utils import BASE_URL, get_with_timeout
@@ -21,11 +20,9 @@ class RestrictedWork(Exception):
 
 
 class Comments(object):
-    def __init__(self, id, sess=None, ao3_url=BASE_URL):
+    def __init__(self, id, session, ao3_url=BASE_URL):
         self.id = id
-        if sess is None:
-            sess = requests.session()
-        self.sess = sess
+        self.session = session
         self.ao3_url = ao3_url
 
     def __repr__(self):
@@ -72,12 +69,12 @@ class Comments(object):
         return work_id, user, anon, toplevel, date_time, timezone, chapter, content
 
     def recursemorecomments(self, url):
-        mc_req = get_with_timeout(self.sess, url)
+        mc_req = get_with_timeout(self.session, url)
         # if timeout, wait and try again
         while len(mc_req.text) < 20 and "Retry later" in mc_req.text:
             print("timeout... waiting 3 mins and trying again")
             time.sleep(180)
-            mc_req = get_with_timeout(self.sess, url)
+            mc_req = get_with_timeout(self.session, url)
 
         mc_soup = BeautifulSoup(mc_req.text, features="html.parser")
         for mc_li_tag in mc_soup.findAll("li", attrs={"class": "comment"}):
@@ -105,12 +102,12 @@ class Comments(object):
         api_url = f"{self.ao3_url}/works/{self.id}?page=%d&show_comments=true&view_full_work=true"
 
         for page_no in itertools.count(start=1):
-            req = get_with_timeout(self.sess, api_url % page_no)
+            req = get_with_timeout(self.session, api_url % page_no)
             # if timeout, wait and try again
             while len(req.text) < 20 and "Retry later" in req.text:
                 print("timeout... waiting 3 mins and trying again")
                 time.sleep(180)
-                req = get_with_timeout(self.sess, api_url % page_no)
+                req = get_with_timeout(self.session, api_url % page_no)
 
             # make sure work can be found
             if req.status_code == 404:

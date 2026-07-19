@@ -56,10 +56,10 @@ class AO3(object):
         :param id: the work ID.  In the URL to a work, this is the number.
             e.g. the work ID of https://archiveofourown.org/works/1234 is 1234.
         """
-        return Work(id=id, sess=self.session, ao3_url=self.ao3_url)
+        return Work(id=id, session=self.session, ao3_url=self.ao3_url)
 
     def comments(self, id):
-        return Comments(id=id, sess=self.session, ao3_url=self.ao3_url)
+        return Comments(id=id, session=self.session, ao3_url=self.ao3_url)
 
     def series(self, id):
         """Look up a series of works posted to AO3.

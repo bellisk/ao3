@@ -3,7 +3,6 @@
 import json
 from datetime import datetime
 
-import requests
 from bs4 import BeautifulSoup, Tag
 
 from .utils import BASE_URL, get_with_timeout
@@ -22,14 +21,12 @@ class HiddenWork(Exception):
 
 
 class Work(object):
-    def __init__(self, id, sess=None, ao3_url=BASE_URL):
+    def __init__(self, id, session=None, ao3_url=BASE_URL):
         self.id = id
-        if sess is None:
-            sess = requests.session()
         self.ao3_url = ao3_url
 
         # Fetch the HTML for this work
-        req = get_with_timeout(sess, f"{self.ao3_url}/works/{self.id}")
+        req = get_with_timeout(session, f"{self.ao3_url}/works/{self.id}")
 
         if req.status_code == 404:
             raise WorkNotFound(f"Unable to find a work with id {self.id!r}")
@@ -42,7 +39,7 @@ class Work(object):
         # confirm that you really want to see the adult works.  Yes, we do.
         if "This work could have adult content" in req.text:
             req = get_with_timeout(
-                sess, f"{self.ao3_url}/works/{self.id}?view_adult=true"
+                session, f"{self.ao3_url}/works/{self.id}?view_adult=true"
             )
 
         # Check for restricted works, which require you to be logged in
