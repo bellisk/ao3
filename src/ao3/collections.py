@@ -1,4 +1,3 @@
-# -*- encoding: utf-8
 from .utils import DATE_UPDATED, get_list_of_work_ids
 
 

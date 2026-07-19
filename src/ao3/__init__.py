@@ -1,4 +1,3 @@
-# -*- encoding: utf-8
 from . import utils
 from .collections import Collection
 from .comments import Comments

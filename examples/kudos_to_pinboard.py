@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8
 """
 A script for syncing kudos from AO3 to Pinboard.
 
