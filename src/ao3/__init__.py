@@ -41,6 +41,10 @@ class AO3(object):
         self.session_handler.login(cookie)
         self.user = User(username, self.session_handler)
 
+    def end_session(self):
+        self.session_handler.end_session()
+        print("Ended session!")
+
     def __repr__(self):
         return f"{type(self).__name__}()"
 
