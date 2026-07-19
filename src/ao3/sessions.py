@@ -121,7 +121,8 @@ class AO3SessionsHandler(object):
                 time.sleep(180)
             else:
                 raise RuntimeError(
-                    f"Error getting url {path}: {response.status_code}, {response.reason}"
+                    f"Error getting url {path}: "
+                    f"{response.status_code}, {response.reason}"
                 )
 
         return response

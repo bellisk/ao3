@@ -1,30 +1,29 @@
 # -*- encoding: utf-8
 from bs4 import BeautifulSoup
 
-from .utils import DATE_UPDATED, get_list_of_work_ids, get_with_timeout
+from .utils import DATE_UPDATED, get_list_of_work_ids
 
 
 class Series(object):
     """An AO3 series."""
 
-    def __init__(self, id, session, ao3_url):
+    def __init__(self, id, session_handler):
         self.id = id
-        self.session = session
-        self.ao3_url = ao3_url
-        self.url = f"{self.ao3_url}/series/{self.id}"
+        self.session_handler = session_handler
+        self.path = f"/series/{self.id}"
 
     def work_ids(self, max_count=0, oldest_date=None):
         return get_list_of_work_ids(
-            self.url,
-            self.session,
+            self.path,
+            self.session_handler,
             max_count=max_count,
             oldest_date=oldest_date,
             date_type=DATE_UPDATED,
         )
 
     def info(self):
-        req = get_with_timeout(self.session, self.url)
-        soup = BeautifulSoup(req.text, features="html.parser")
+        response = self.session_handler.get_with_timeout(self.path)
+        soup = BeautifulSoup(response.text, features="html.parser")
 
         info = {"Title": soup.h2.text.strip()}
 

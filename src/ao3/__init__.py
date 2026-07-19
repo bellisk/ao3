@@ -1,8 +1,4 @@
 # -*- encoding: utf-8
-from urllib.parse import urlparse
-
-import requests
-
 from . import utils
 from .collections import Collection
 from .comments import Comments
@@ -44,20 +40,26 @@ class AO3(object):
         risk! Be careful if using an alternate AO3 url.
         """
         self.session_handler.login(cookie)
-        self.user = User(username, self.session_handler, self.ao3_url)
+        self.user = User(username, self.session_handler)
 
     def __repr__(self):
         return f"{type(self).__name__}()"
 
     def work(self, id):
         """Look up a work that's been posted to AO3.
+
         :param id: the work ID.  In the URL to a work, this is the number.
             e.g. the work ID of https://archiveofourown.org/works/1234 is 1234.
         """
-        return Work(id=id, session=self.session_handler, ao3_url=self.ao3_url)
+        return Work(id=id, session_handler=self.session_handler)
 
     def comments(self, id):
-        return Comments(id=id, session=self.session_handler, ao3_url=self.ao3_url)
+        """Look up comments on a work that's been posted to AO3.
+
+        :param id: the work ID.  In the URL to a work, this is the number.
+            e.g. the work ID of https://archiveofourown.org/works/1234 is 1234.
+        """
+        return Comments(work_id=id, session_handler=self.session_handler)
 
     def series(self, id):
         """Look up a series of works posted to AO3.
@@ -65,7 +67,7 @@ class AO3(object):
         :param id: the series ID. In the url to a series, this is the number.
            e.g. the series ID of https://archiveofourown.org/series/1234 is 1234.
         """
-        return Series(id=id, session=self.session_handler, ao3_url=self.ao3_url)
+        return Series(id=id, session_handler=self.session_handler)
 
     def collection(self, id):
         """Look up a collection of works posted to AO3.
@@ -73,7 +75,7 @@ class AO3(object):
         :param id: the collection ID, e.g. example_collection in the url
            https://archiveofourown.org/collection/example_collection.
         """
-        return Collection(id=id, session=self.session_handler, ao3_url=self.ao3_url)
+        return Collection(id=id, session_handler=self.session_handler)
 
     def author(self, username):
         """Look up an AO3 author by username. This method is called 'author' to avoid
@@ -85,5 +87,4 @@ class AO3(object):
         return User(
             username=username,
             session_handler=self.session_handler,
-            ao3_url=self.ao3_url,
         )
