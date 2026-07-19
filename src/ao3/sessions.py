@@ -4,21 +4,18 @@ from urllib.parse import urlparse
 
 import requests
 
-from . import utils
-
+DEFAULT_AO3_URL = "https://archiveofourown.org"
 DEFAULT_FLARESOLVERR_PROXY_URL = "http://localhost:8191/v1"
 
 
-class Ao3SessionsHandler(object):
+class AO3SessionsHandler(object):
     def __init__(
         self,
-        username,
-        cookie,
-        ao3_url=utils.BASE_URL,
+        ao3_url=DEFAULT_AO3_URL,
         use_flaresolverr=False,
         flaresolverr_url=None,
     ):
-        self.username = username
+        self.cookies = None
         self.ao3_url = ao3_url
         self.use_flaresolverr = use_flaresolverr
 
@@ -48,6 +45,9 @@ class Ao3SessionsHandler(object):
             print(
                 f"Created FlareSolverr session with id {self.flaresolverr_session_id}"
             )
+
+    def login(self, cookie):
+        if self.use_flaresolverr:
             self.cookies = [
                 {
                     "name": "_otwarchive_session",
@@ -64,6 +64,23 @@ class Ao3SessionsHandler(object):
             jar.set("_otwarchive_session", cookie, domain=ao3_domain)
             jar.set("user_credentials", "1", domain=ao3_domain)
             self.requests_session.cookies = jar
+
+    def end_session(self):
+        if self.use_flaresolverr:
+            # Destroy FlareSolverr session
+            headers = {"Content-Type": "application/json"}
+            data = {"cmd": "sessions.destroy", "session": self.flaresolverr_session_id}
+            response = self.requests_session.post(
+                self.flaresolverr_url, headers=headers, json=data
+            )
+            response.raise_for_status()
+            response_json = json.loads(response.text)
+
+            if response_json.get("status") != "ok":
+                raise RuntimeError(
+                    f"Error destroying FlareSolverr session: {response_json['message']}"
+                )
+        self.requests_session.close()
 
     def get(self, path):
         """Get the path at the set ao3_url, using FlareSolverr if it is configured.
@@ -85,7 +102,7 @@ class Ao3SessionsHandler(object):
         return self.requests_session.get(self.ao3_url + path)
 
     def get_with_timeout(self, path):
-        # AO3 got stricter with rate limits, so let's be careful
+        # Enforce pause between requests
         time.sleep(5)
 
         # if timeout, wait and try again
