@@ -3,7 +3,7 @@
 import itertools
 import time
 
-import cloudscraper
+import requests
 from bs4 import BeautifulSoup
 
 from .utils import BASE_URL, get_with_timeout
@@ -24,7 +24,7 @@ class Comments(object):
     def __init__(self, id, sess=None, ao3_url=BASE_URL):
         self.id = id
         if sess is None:
-            sess = cloudscraper.create_scraper()
+            sess = requests.session()
         self.sess = sess
         self.ao3_url = ao3_url
 

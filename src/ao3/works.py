@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 
-import cloudscraper
+import requests
 from bs4 import BeautifulSoup, Tag
 
 from .utils import BASE_URL, get_with_timeout
@@ -25,7 +25,7 @@ class Work(object):
     def __init__(self, id, sess=None, ao3_url=BASE_URL):
         self.id = id
         if sess is None:
-            sess = cloudscraper.create_scraper()
+            sess = requests.session()
         self.ao3_url = ao3_url
 
         # Fetch the HTML for this work
