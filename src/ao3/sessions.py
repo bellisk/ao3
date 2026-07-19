@@ -96,16 +96,33 @@ class AO3SessionsHandler(object):
                 "url": self.ao3_url + path,
                 "cookies": self.cookies,
             }
-            return self.requests_session.post(
+            response = self.requests_session.post(
                 self.flaresolverr_url, headers=headers, json=data
             )
+            response.raise_for_status()
+            response_json = json.loads(response.text)
+
+            if response_json.get("status") != "ok":
+                raise RuntimeError(
+                    f"Error getting url {self.ao3_url + path} with FlareSolverr: "
+                    f"{response_json['message']}"
+                )
+
+            # FlareSolverr returns a text body containing json as described here:
+            # https://github.com/FlareSolverr/FlareSolverr#-requestget
+            new_response = Response()
+            new_response.url = response_json["solution"].get("url")
+            new_response.status_code = response_json["solution"].get("status")
+            new_response._content = bytes(
+                response_json["solution"].get("response"), "utf-8"
+            )
+            new_response.raise_for_status()
+
+            return new_response
 
         return self.requests_session.get(self.ao3_url + path)
 
     def get_with_timeout(self, path):
-        # Enforce pause between requests
-        time.sleep(5)
-
         # if timeout, wait and try again
         while True:
             response = self.get(path)
