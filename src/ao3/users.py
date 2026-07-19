@@ -122,7 +122,6 @@ class User(object):
     def _get_list_of_work_ids_from_bookmarks_page(
         self,
         list_url,
-        session,
         max_count=None,
         expand_series=False,
         oldest_date=None,
@@ -172,7 +171,7 @@ class User(object):
                     work_ids.append(id)
                 elif expand_series is True and id_type == TYPE_SERIES:
                     print(f"Getting all urls from series {id}....")
-                    series = Series(id, session, self.path)
+                    series = Series(id, self.session_handler)
                     for i in series.work_ids():
                         work_ids.append(i)
 
