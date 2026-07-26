@@ -39,10 +39,6 @@ def work_id_from_url(url):
         raise RuntimeError("%r is not a recognised AO3 work URL")
 
 
-def work_url_from_id(work_id):
-    return f"{BASE_URL}/works/{work_id}"
-
-
 def get_list_of_work_ids(
     list_path,
     session_handler,

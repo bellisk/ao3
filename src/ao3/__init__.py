@@ -29,8 +29,9 @@ class AO3(object):
 
     def login(self, username, cookie):
         """Log in to the archive.
-        This allows you to access pages that are only available while
-        logged in. Does no checking if the cookie is valid.
+
+        This allows you to access pages that are only available while logged in. Does no
+        checking if the cookie is valid.
         The cookie should be the value for _otwarchive_session, which can be got from
         the browser when you are logged in there.
         This avoids passing the user's login credentials in plaintext.
@@ -41,12 +42,17 @@ class AO3(object):
         self.session_handler.login(cookie)
         self.user = User(username, self.session_handler)
 
-    def end_session(self):
+    def logout(self):
+        """Clear username and cookies, and tell session_handler to close all sessions."""
+        self.user = None
         self.session_handler.end_session()
-        print("Ended session!")
+        self.session_handler.cookies = None
 
     def __repr__(self):
         return f"{type(self).__name__}()"
+
+    def work_url_from_id(self, work_id):
+        return f"{self.ao3_url}/works/{work_id}"
 
     def work(self, id):
         """Look up a work that's been posted to AO3.
