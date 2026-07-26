@@ -36,7 +36,7 @@ def work_id_from_url(url):
     if match:
         return match.group("work_id")
     else:
-        raise RuntimeError("%r is not a recognised AO3 work URL")
+        raise RuntimeError(f"{url} is not a recognised AO3 work URL")
 
 
 def get_list_of_work_ids(
