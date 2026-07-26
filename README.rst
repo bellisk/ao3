@@ -44,14 +44,14 @@ Create an API instance:
 ``AO3()`` takes the following optional parameters:
 
 * ``ao3_url``: the url of a AO3 mirror site to access (defaults to ``https://archiveofourown.org`` if not set)
-* ``use_flaresolverr``: whether the interface should use `FlareSolverr <https://github.com/FlareSolverr/FlareSolverr>`
+* ``use_flaresolverr``: whether the interface should use `FlareSolverr <https://github.com/FlareSolverr/FlareSolverr>`_
   to access AO3 (default is ``False``)
 * ``flaresolverr_url``: a custom url for your FlareSolverr instance, if used (default is the default url,
   ``http://localhost:8191/v1``)
 
 **WARNING:** passing your cookie into a non-official mirror is a security risk! If the default url is having trouble, I
-advise only using one of the official AO3 mirror sites: `https://archive.transformativeworks.org <https://archive.transformativeworks.org>`
-or `https://archiveofourown.org <https://archiveofourown.org>`.
+advise only using one of the official AO3 mirror sites: `https://archive.transformativeworks.org <https://archive.transformativeworks.org>`_
+or `https://archiveofourown.org <https://archiveofourown.org>`_.
 
 Logging into your account
 --------------------------
