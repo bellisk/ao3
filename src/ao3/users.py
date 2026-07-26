@@ -175,7 +175,7 @@ class User(object):
                     for i in series.work_ids():
                         work_ids.append(i)
 
-                if max_count and len(work_ids) >= max_count:
+                if max_count is not None and len(work_ids) >= max_count:
                     max_works_found = True
                     work_ids = work_ids[0:max_count]
                     break
@@ -485,7 +485,7 @@ class User(object):
                 num_subs += 1
                 sub_ids.append(id)
 
-                if max_count and num_subs >= max_count:
+                if max_count is not None and num_subs >= max_count:
                     max_subs_found = True
                     sub_ids = sub_ids[0:max_count]
                     break

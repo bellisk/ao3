@@ -86,7 +86,7 @@ def get_list_of_work_ids(
             if id_type == TYPE_WORKS:
                 work_ids.append(id)
 
-            if max_count and len(work_ids) >= max_count:
+            if max_count is not None and len(work_ids) >= max_count:
                 max_works_found = True
                 work_ids = work_ids[0:max_count]
                 break
