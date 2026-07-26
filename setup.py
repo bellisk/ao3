@@ -21,7 +21,7 @@ setup(
     version="0.2.0",
     description="A Python API for scraping AO3 (the Archive of Our Own)",
     long_description=long_description,
-    url="https://github.com/alexwlchan/ao3",
+    url="https://github.com/bellisk/ao3",
     author="Alex Chan",
     author_email="alex@alexwlchan.net",
     license="MIT",
