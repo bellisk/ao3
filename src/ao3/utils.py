@@ -1,9 +1,7 @@
-# -*- encoding: utf-8
 """Utility functions."""
 
 import itertools
 import re
-import time
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -38,16 +36,12 @@ def work_id_from_url(url):
     if match:
         return match.group("work_id")
     else:
-        raise RuntimeError("%r is not a recognised AO3 work URL")
-
-
-def work_url_from_id(work_id):
-    return f"{BASE_URL}/works/{work_id}"
+        raise RuntimeError(f"{url} is not a recognised AO3 work URL")
 
 
 def get_list_of_work_ids(
-    list_url,
-    session,
+    list_path,
+    session_handler,
     max_count=None,
     oldest_date=None,
     date_type="",
@@ -58,11 +52,11 @@ def get_list_of_work_ids(
     Ignores external work bookmarks.
     User must be logged in to see private bookmarks.
     """
-    query = urlparse(list_url).query
+    query = urlparse(list_path).query
     if not query:
-        list_url += "?page=%d"
+        list_path += "?page=%d"
     elif "page" not in query:
-        list_url += "&page=%d"
+        list_path += "&page=%d"
 
     work_ids = []
     max_works_found = False
@@ -73,8 +67,8 @@ def get_list_of_work_ids(
             % (page_no, len(work_ids))
         )
 
-        req = get_with_timeout(session, list_url % page_no)
-        soup = BeautifulSoup(req.text, features="html.parser")
+        response = session_handler.get_with_timeout(list_path % page_no)
+        soup = BeautifulSoup(response.text, features="html.parser")
 
         for id_type, id, date in get_ids_and_dates_from_page(soup, date_type):
             if oldest_date and date and date < oldest_date:
@@ -92,7 +86,7 @@ def get_list_of_work_ids(
             if id_type == TYPE_WORKS:
                 work_ids.append(id)
 
-            if max_count and len(work_ids) >= max_count:
+            if max_count is not None and len(work_ids) >= max_count:
                 max_works_found = True
                 work_ids = work_ids[0:max_count]
                 break
@@ -202,32 +196,6 @@ def get_ids_and_dates_from_page(soup, date_type):
                 pass
             else:
                 raise
-
-
-def get_with_timeout(session, url):
-    # AO3 got stricter with rate limits, so let's be careful
-    time.sleep(5)
-
-    # if timeout, wait and try again
-    while True:
-        req = session.get(url)
-        if req.status_code == 200:
-            break
-        elif req.status_code == 503:
-            print("Got error 503... waiting 10 seconds and trying again")
-            time.sleep(10)
-        elif req.status_code == 525:
-            print("Got Cloudflare error 525... waiting 10 seconds and trying again")
-            time.sleep(10)
-        elif len(req.text) < 20 and "Retry later" in req.text:
-            print("Timeout... waiting 3 mins and trying again")
-            time.sleep(180)
-        else:
-            raise RuntimeError(
-                f"Error getting url {url}: {req.status_code}, {req.reason}"
-            )
-
-    return req
 
 
 def get_user_interaction_date(li_tag):

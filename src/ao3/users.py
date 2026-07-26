@@ -1,7 +1,5 @@
-# -*- encoding: utf-8
 import itertools
 import re
-import time
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -10,7 +8,6 @@ from bs4 import BeautifulSoup
 from . import Series
 from .utils import (
     AO3_DATE_FORMAT,
-    BASE_URL,
     DATE_INTERACTED_WITH,
     DATE_UPDATED,
     TYPE_SERIES,
@@ -19,7 +16,6 @@ from .utils import (
     WORKS_HEADER_REGEX,
     get_ids_and_dates_from_page,
     get_list_of_work_ids,
-    get_with_timeout,
 )
 from .works import Work
 
@@ -31,11 +27,10 @@ class User(object):
     no information on subscriptions or private bookmarks.
     """
 
-    def __init__(self, username, session, ao3_url=BASE_URL):
+    def __init__(self, username, session_handler):
         self.username = username
-        self.session = session
-        self.ao3_url = ao3_url
-        self.url = f"{self.ao3_url}/users/{self.username}"
+        self.session_handler = session_handler
+        self.path = f"/users/{self.username}"
 
         # just for curiosity, count how many times deleted or locked works appear
         self.deleted = 0
@@ -44,9 +39,9 @@ class User(object):
         return f"{type(self).__name__}(username={self.username!r})"
 
     def works_count(self):
-        url = f"{self.url}/works"
-        req = get_with_timeout(self.session, url)
-        soup = BeautifulSoup(req.text, features="html.parser")
+        works_path = f"{self.path}/works"
+        response = self.session_handler.get_with_timeout(works_path)
+        soup = BeautifulSoup(response.text, features="html.parser")
         header_text = soup.h2.text
         m = re.search(WORKS_HEADER_REGEX, header_text)
 
@@ -63,12 +58,12 @@ class User(object):
         updated, descending. Otherwise, sorting is by date the work was created,
         descending.
         """
-        url = f"{self.url}/works"
+        works_path = f"{self.path}/works"
         date_type = DATE_UPDATED
 
         return get_list_of_work_ids(
-            url,
-            self.session,
+            works_path,
+            self.session_handler,
             date_type=date_type,
             max_count=max_count,
             oldest_date=oldest_date,
@@ -82,12 +77,12 @@ class User(object):
         updated, descending. Otherwise, sorting is by date the work was created,
         descending.
         """
-        url = f"{self.ao3_url}/users/{self.username}/gifts?page=%d"
+        gifts_path = f"{self.path}/gifts"
         date_type = DATE_UPDATED
 
         return get_list_of_work_ids(
-            url,
-            self.session,
+            gifts_path,
+            self.session_handler,
             date_type=date_type,
             max_count=max_count,
             oldest_date=oldest_date,
@@ -109,16 +104,15 @@ class User(object):
         updated, descending. Otherwise, sorting is by date the bookmark was created,
         descending.
         """
-        url = f"{self.ao3_url}/users/{self.username}/bookmarks?page=%d"
+        url = f"{self.path}/bookmarks"
         date_type = DATE_INTERACTED_WITH
 
         if sort_by_updated:
-            url += "&bookmark_search[sort_column]=bookmarkable_date"
+            url += "?bookmark_search[sort_column]=bookmarkable_date"
             date_type = DATE_UPDATED
 
         return self._get_list_of_work_ids_from_bookmarks_page(
             url,
-            self.session,
             max_count,
             expand_series,
             oldest_date,
@@ -128,7 +122,6 @@ class User(object):
     def _get_list_of_work_ids_from_bookmarks_page(
         self,
         list_url,
-        session,
         max_count=None,
         expand_series=False,
         oldest_date=None,
@@ -158,8 +151,8 @@ class User(object):
                 % (page_no, len(work_ids))
             )
 
-            req = get_with_timeout(session, list_url % page_no)
-            soup = BeautifulSoup(req.text, features="html.parser")
+            response = self.session_handler.get_with_timeout(list_url % page_no)
+            soup = BeautifulSoup(response.text, features="html.parser")
 
             for id_type, id, date in get_ids_and_dates_from_page(soup, date_type):
                 if oldest_date and date and date < oldest_date:
@@ -178,11 +171,11 @@ class User(object):
                     work_ids.append(id)
                 elif expand_series is True and id_type == TYPE_SERIES:
                     print(f"Getting all urls from series {id}....")
-                    series = Series(id, session, self.ao3_url)
+                    series = Series(id, self.session_handler)
                     for i in series.work_ids():
                         work_ids.append(i)
 
-                if max_count and len(work_ids) >= max_count:
+                if max_count is not None and len(work_ids) >= max_count:
                     max_works_found = True
                     work_ids = work_ids[0:max_count]
                     break
@@ -213,11 +206,11 @@ class User(object):
         """
         Returns a list of the user's marked-for-later ids.
         """
-        url = f"{self.ao3_url}/users/{self.username}/readings?show=to-read"
+        marked_path = f"{self.path}/readings?show=to-read"
 
         return get_list_of_work_ids(
-            url,
-            self.session,
+            marked_path,
+            self.session_handler,
             max_count=max_count,
             oldest_date=oldest_date,
             date_type=DATE_INTERACTED_WITH,
@@ -262,7 +255,7 @@ class User(object):
         bookmarks = []
 
         for bookmark_id in bookmark_ids:
-            work = Work(bookmark_id, self.session, self.ao3_url)
+            work = Work(bookmark_id, self.session_handler)
             bookmarks.append(work)
 
             bookmark_total = bookmark_total + 1
@@ -283,23 +276,18 @@ class User(object):
         of strings (if multiple values) or a string.
         """
         # TODO: What happens if you don't have this feature enabled?
-        # TODO: probably this should be returned as a structured object instead of this giant tuple
+        # TODO: probably this should be returned as a structured object instead of this
+        # giant tuple
 
         # URL for the user's reading history page
-        api_url = f"{self.ao3_url}/users/{self.username}/readings?page=%d"
+        api_url = f"{self.path}/readings?page=%d"
 
         for page_no in itertools.count(start=1):
-            req = get_with_timeout(self.session, api_url % page_no)
+            response = self.session_handler.get_with_timeout(api_url % page_no)
             print("On page: " + str(page_no))
             print("Cumulative deleted works encountered: " + str(self.deleted))
 
-            # if timeout, wait and try again
-            while len(req.text) < 20 and "Retry later" in req.text:
-                print("timeout... waiting 3 mins and trying again")
-                time.sleep(180)
-                req = get_with_timeout(self.session, api_url % page_no)
-
-            soup = BeautifulSoup(req.text, features="html.parser")
+            soup = BeautifulSoup(response.text, features="html.parser")
             # The entries are stored in a list of the form:
             #
             #     <ol class="reading work index group">
@@ -412,7 +400,25 @@ class User(object):
                         "p", attrs={"class", "datetime"}
                     ).contents[0]
                     pubdate = datetime.strptime(pubdate_str, "%d %b %Y").date()
-                    yield work_id, date, numvisits, title, author, fandom, warnings, relationships, characters, freeforms, words, chapters, comments, kudos, bookmarks, hits, pubdate
+                    yield (
+                        work_id,
+                        date,
+                        numvisits,
+                        title,
+                        author,
+                        fandom,
+                        warnings,
+                        relationships,
+                        characters,
+                        freeforms,
+                        words,
+                        chapters,
+                        comments,
+                        kudos,
+                        bookmarks,
+                        hits,
+                        pubdate,
+                    )
 
                 except (KeyError, AttributeError):
                     # A deleted work shows up as
@@ -448,7 +454,7 @@ class User(object):
         Returns a list of ids from a list of the user's subscriptions:
         work, series or username.
         """
-        api_url = f"{self.ao3_url}/users/{self.username}/subscriptions?type={sub_type}&page=%d"
+        subscriptions_path = f"{self.path}/subscriptions?type={sub_type}&page=%d"
 
         sub_ids = []
         max_subs_found = False
@@ -463,7 +469,7 @@ class User(object):
                 + " ids found up to now."
             )
 
-            req = get_with_timeout(self.session, api_url % page_no)
+            req = self.session_handler.get_with_timeout(subscriptions_path % page_no)
             soup = BeautifulSoup(req.text, features="html.parser")
 
             table_tag = soup.find("dl", attrs={"class": "subscription"})
@@ -479,7 +485,7 @@ class User(object):
                 num_subs += 1
                 sub_ids.append(id)
 
-                if max_count and num_subs >= max_count:
+                if max_count is not None and num_subs >= max_count:
                     max_subs_found = True
                     sub_ids = sub_ids[0:max_count]
                     break

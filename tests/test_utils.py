@@ -1,4 +1,3 @@
-# -*- encoding: utf-8
 """Tests for ao3.utils."""
 
 import pytest

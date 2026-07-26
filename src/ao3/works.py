@@ -1,11 +1,9 @@
-# -*- encoding: utf-8
-
 import json
 from datetime import datetime
 
 from bs4 import BeautifulSoup, Tag
 
-from .utils import BASE_URL, get_with_timeout
+from .utils import BASE_URL
 
 
 class WorkNotFound(Exception):
@@ -21,25 +19,18 @@ class HiddenWork(Exception):
 
 
 class Work(object):
-    def __init__(self, id, session=None, ao3_url=BASE_URL):
+    def __init__(self, id, session_handler):
         self.id = id
-        self.ao3_url = ao3_url
 
         # Fetch the HTML for this work
-        req = get_with_timeout(session, f"{self.ao3_url}/works/{self.id}")
+        response = session_handler.get_with_timeout(f"/works/{self.id}?view_adult=true")
 
-        if req.status_code == 404:
+        if response.status_code == 404:
             raise WorkNotFound(f"Unable to find a work with id {self.id!r}")
-        elif req.status_code != 200:
+        elif response.status_code != 200:
             raise RuntimeError(
-                f"Unexpected error from AO3 API: {req.text!r} ({req.status_code!r})"
-            )
-
-        # For some works, AO3 throws up an interstitial page asking you to
-        # confirm that you really want to see the adult works.  Yes, we do.
-        if "This work could have adult content" in req.text:
-            req = get_with_timeout(
-                session, f"{self.ao3_url}/works/{self.id}?view_adult=true"
+                f"Unexpected error from AO3 API: {response.text!r} "
+                f"({response.status_code!r})"
             )
 
         # Check for restricted works, which require you to be logged in
@@ -48,16 +39,16 @@ class Work(object):
         # across all the API classes.  Not impossible, but fiddlier than I
         # care to implement right now.
         # TODO: Fix this.
-        if "This work is only available to registered users" in req.text:
+        if "This work is only available to registered users" in response.text:
             raise RestrictedWork("Looking at work ID %s requires login")
 
         if (
             "This work is part of an ongoing challenge and will be revealed soon!"
-            in req.text
+            in response.text
         ):
             raise HiddenWork("Work ID %s is currently hidden")
 
-        self._html = req.text
+        self._html = response.text
         self._soup = BeautifulSoup(self._html, "html.parser")
 
     def __repr__(self):
@@ -75,7 +66,7 @@ class Work(object):
     @property
     def url(self):
         """A URL to this work."""
-        return f"{self.ao3_url}/works/{self.id}"
+        return f"{BASE_URL}/works/{self.id}"
 
     @property
     def title(self):

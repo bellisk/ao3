@@ -1,18 +1,16 @@
 ao3.py
 ======
 
-This is my fork of alexwlchan's ao3 package, which is not actively maintained. Contributors to this 
-include etothepii and superborb. I actively maintain this fork and welcome contributions.
+This is my (bellisk's) fork of ladyofthelog's fork of alexwlchan's ao3 package.
 
-A departure from the original package is that this one uses your username and cookie,
-rather than plaintext password entry. 
-
-- verity (ladyofthelog)
+I actively maintain this fork and welcome contributions, though development is driven by my own idiosyncratic needs
+(see `CalibreFanFicManagement <https://github.com/bellisk/CalibreFanFicManagement>`_ for what I'm doing with this
+interface).
 
 **********
 
-This Python package provides a scripted interface to some of the data on
-`AO3 <https://archiveofourown.org/>`_ (the Archive of Our Own).
+This Python package provides a scripted interface to some of the data on `AO3 <https://archiveofourown.org/>`_ (the
+Archive of Our Own).
 
 It is **not** an official API.
 
@@ -40,9 +38,21 @@ Create an API instance:
 
 .. code-block:: pycon
 
-   >>> from ao3 import AO3, 
+   >>> from ao3 import AO3,
    >>> api = AO3()
-   
+
+``AO3()`` takes the following optional parameters:
+
+* ``ao3_url``: the url of a AO3 mirror site to access (defaults to ``https://archiveofourown.org`` if not set)
+* ``use_flaresolverr``: whether the interface should use `FlareSolverr <https://github.com/FlareSolverr/FlareSolverr>`_
+  to access AO3 (default is ``False``)
+* ``flaresolverr_url``: a custom url for your FlareSolverr instance, if used (default is the default url,
+  ``http://localhost:8191/v1``)
+
+**WARNING:** passing your cookie into a non-official mirror is a security risk! If the default url is having trouble, I
+advise only using one of the official AO3 mirror sites: `https://archive.transformativeworks.org <https://archive.transformativeworks.org>`_
+or `https://archiveofourown.org <https://archiveofourown.org>`_.
+
 Logging into your account
 --------------------------
 
@@ -51,15 +61,15 @@ Enter the contents of your _otwarchive_session cookie and username
 .. code-block:: pycon
 
    >>> api.login('USERNAME',"COOKIE CONTENTS")
-    
-If you have Viewing History enabled, you can get a list of works from 
+
+If you have Viewing History enabled, you can get a list of works from
 that history.
 
 .. code-block:: pycon
 
    >>> rh=api.user.reading_history()
    >>> next(rh)
-   
+
 This returns a tuple with information about the next work in your history
 
 
@@ -163,10 +173,10 @@ for easy export/passing into other places:
 Looking up your bookmarks
 -------------------------
 
-If you login as a user you can look up the bookmarks for that user. You can 
+If you login as a user you can look up the bookmarks for that user. You can
 get the bookmarks as a list of AO3 id numbers or as a list of work objects.
 
-Warning: This is very slow as as the api has to go back and retrieve every 
+Warning: This is very slow as as the api has to go back and retrieve every
 page.
 
 Get the bookmarks as works:

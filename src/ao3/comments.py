@@ -1,11 +1,6 @@
-# -*- encoding: utf-8
-
 import itertools
-import time
 
 from bs4 import BeautifulSoup
-
-from .utils import BASE_URL, get_with_timeout
 
 # Making this a separate class from Work bc the URL being fetched is different and we
 # will need to iterate through pages of comments.
@@ -20,13 +15,12 @@ class RestrictedWork(Exception):
 
 
 class Comments(object):
-    def __init__(self, id, session, ao3_url=BASE_URL):
-        self.id = id
-        self.session = session
-        self.ao3_url = ao3_url
+    def __init__(self, work_id, session_handler):
+        self.work_id = work_id
+        self.session_handler = session_handler
 
     def __repr__(self):
-        return f"{type(self).__name__}(id={self.id!r})"
+        return f"{type(self).__name__}(id={self.work_id!r})"
 
     def parsecomment(self, li_tag):  # inside class so the self info stays attached
         h4_tag = li_tag.find("h4", attrs={"class": "heading"})
@@ -68,24 +62,19 @@ class Comments(object):
 
         return work_id, user, anon, toplevel, date_time, timezone, chapter, content
 
-    def recursemorecomments(self, url):
-        mc_req = get_with_timeout(self.session, url)
-        # if timeout, wait and try again
-        while len(mc_req.text) < 20 and "Retry later" in mc_req.text:
-            print("timeout... waiting 3 mins and trying again")
-            time.sleep(180)
-            mc_req = get_with_timeout(self.session, url)
-
-        mc_soup = BeautifulSoup(mc_req.text, features="html.parser")
+    def recursemorecomments(self, path):
+        mc_resp = self.session_handler.get_with_timeout(path)
+        mc_soup = BeautifulSoup(mc_resp.text, features="html.parser")
         for mc_li_tag in mc_soup.findAll("li", attrs={"class": "comment"}):
             try:
                 yield self.parsecomment(mc_li_tag)
             except AttributeError:
                 if "more comments in this thread" in str(
                     mc_li_tag
-                ):  # potentially will break if nested further?? unsure what that looks like though
+                ):  # potentially will break if nested further?? unsure what that looks
+                    # like though
                     for x in self.recursemorecomments(
-                        BASE_URL + mc_li_tag.find("a").get("href")
+                        self.session_handler.ao3_url + mc_li_tag.find("a").get("href")
                     ):
                         yield x
                 else:
@@ -93,25 +82,24 @@ class Comments(object):
 
     def comment_contents(self):
         """Generator for next comment on the work.
-        Generates a tuple of user, anon (boolean value -- true if anon), toplevel (boolean value - true if toplevel comment), (day of month, month, year, time), timezone, content
+        Generates a tuple of user, anon (boolean value -- true if anon), toplevel
+        (boolean value - true if toplevel comment), (day of month, month, year, time),
+        timezone, content
         Unless otherwise specified, all values are returned as strings
         Returned datetime is for the time the comment was made, not the edited time
 
         """
 
-        api_url = f"{self.ao3_url}/works/{self.id}?page=%d&show_comments=true&view_full_work=true"
+        api_url = (
+            f"/works/{self.work_id}?page=%d&show_comments=true&view_full_work=true"
+        )
 
         for page_no in itertools.count(start=1):
-            req = get_with_timeout(self.session, api_url % page_no)
-            # if timeout, wait and try again
-            while len(req.text) < 20 and "Retry later" in req.text:
-                print("timeout... waiting 3 mins and trying again")
-                time.sleep(180)
-                req = get_with_timeout(self.session, api_url % page_no)
+            req = self.session_handler.get_with_timeout(api_url % page_no)
 
             # make sure work can be found
             if req.status_code == 404:
-                raise WorkNotFound(f"Unable to find a work with id {self.id!r}")
+                raise WorkNotFound(f"Unable to find a work with id {self.work_id!r}")
             elif req.status_code != 200:
                 raise RuntimeError(
                     f"Unexpected error from AO3 API: {req.text!r} ({req.status_code!r})"
@@ -119,7 +107,9 @@ class Comments(object):
             if "This work could have adult content" in req.text:
                 raise RestrictedWork(
                     "Work ID %s may have adult content"
-                )  # force login to look at this, though theoretically the URL would just have to be modified to add view_adult=true. but i don't want to test this now :P
+                )  # force login to look at this, though theoretically the URL would
+                # just have to be modified to add view_adult=true. but i don't want to
+                # test this now :P
             if "This work is only available to registered users" in req.text:
                 raise RestrictedWork("Looking at work ID %s requires login")
 
@@ -133,7 +123,7 @@ class Comments(object):
                         pass
                     elif "more comments in this thread" in str(li_tag):
                         for x in self.recursemorecomments(
-                            BASE_URL + li_tag.find("a").get("href")
+                            self.session_handler.ao3_url + li_tag.find("a").get("href")
                         ):
                             yield x
                     else:
